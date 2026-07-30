@@ -1,11 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores'
 import { useRouter } from 'vue-router'
 
 const playerStore = usePlayerStore()
 const router = useRouter()
-
+const showPlaylist = ref(false)
 const progressPercent = computed(() => {
   if (!playerStore.duration) return 0
   return (playerStore.currentTime / playerStore.duration) * 100
@@ -43,7 +43,7 @@ const goPlayPage = () => {
       <button class="play-btn" @click.stop="playerStore.togglePlay()">
         <van-icon :name="playIcon" size="28" :class="playIcon" />
       </button>
-      <button class="list-btn" @click.stop="">
+      <button class="list-btn" @click.stop="showPlaylist = true">
         <van-icon name="music-o" size="20" />
       </button>
     </div>
@@ -52,6 +52,8 @@ const goPlayPage = () => {
       <div class="progress-fill" :style="{ width: progressPercent + '%' }" />
     </div>
   </div>
+  <!-- 播放列表弹出层 -->
+  <playlist-sheet v-model:show="showPlaylist" />
 </template>
 
 <style lang="scss" scoped>

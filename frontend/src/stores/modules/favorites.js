@@ -13,7 +13,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
     const authStore = useAuthStore()
     if (!authStore.isLoggedIn) return
     const res = await getFavoriteService()
-    favoriteSongs.value = res.data.favorites
+    favoriteSongs.value = res.favorites
   }
 
   async function toggleFavorite(song) {

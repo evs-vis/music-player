@@ -28,7 +28,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:3000'
+      '/api': 'http://localhost:3000',
+      '/covers': 'http://localhost:3000', // 新增封面图代理
+      '/audio': 'http://localhost:3000' // 新增音频文件代理
     }
   }
 })

@@ -28,7 +28,7 @@ const handleLogin = () => {
 
 <style lang="scss" scoped>
 .app-header {
-  position: sticky;
+  // position: sticky;
   top: 0;
   z-index: 40;
   display: flex;
@@ -36,7 +36,7 @@ const handleLogin = () => {
   justify-content: space-between;
   height: 56px;
   padding: 0 20px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(0.75rem);
   -webkit-backdrop-filter: blur(0.75rem);
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);

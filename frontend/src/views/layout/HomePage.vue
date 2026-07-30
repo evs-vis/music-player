@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores'
 import { useAuthStore } from '@/stores'
-import { getPlaylistsService, getSongsService } from '@/api/home'
+import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
 import { showNotify } from 'vant'
 

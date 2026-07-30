@@ -4,7 +4,7 @@ import { ref } from 'vue'
 export const usePlayerStore = defineStore(
   'player',
   () => {
-    // 1. state —— 全部转为 ref 或 reactive
+    // ===== state =====
     const currentSong = ref(null)
     const playlist = ref([])
     const currentIndex = ref(-1)
@@ -14,7 +14,7 @@ export const usePlayerStore = defineStore(
     const playMode = ref('loop') // loop | one | shuffle
     const volume = ref(parseFloat(localStorage.getItem('volume') || '1'))
 
-    // 2. actions —— 转为普通函数
+    // ===== actions =====
 
     function setPlaylist(songs, startIndex = 0) {
       playlist.value = songs
@@ -83,7 +83,32 @@ export const usePlayerStore = defineStore(
       playMode.value = modes[(idx + 1) % modes.length]
     }
 
-    // 3. 暴露所有需要使用的状态和方法
+    // 新增：从播放列表中移除指定索引的歌曲
+    function removeFromPlaylist(index) {
+      if (playlist.value.length <= 1) return // 至少保留一首
+      playlist.value.splice(index, 1)
+
+      // 调整当前索引
+      if (index < currentIndex.value) {
+        currentIndex.value--
+      } else if (index === currentIndex.value) {
+        // 如果删除的是当前播放的歌曲，切换到下一首（或上一首）
+        if (currentIndex.value >= playlist.value.length) {
+          currentIndex.value = playlist.value.length - 1
+        }
+        currentSong.value = playlist.value[currentIndex.value] || null
+      }
+    }
+
+    // 新增：清空播放列表
+    function clearPlaylist() {
+      playlist.value = []
+      currentIndex.value = -1
+      currentSong.value = null
+      isPlaying.value = false
+    }
+
+    // ===== 暴露 =====
     return {
       currentSong,
       playlist,
@@ -101,7 +126,9 @@ export const usePlayerStore = defineStore(
       prev,
       setProgress,
       setVolume,
-      changeMode
+      changeMode,
+      removeFromPlaylist, // 新增
+      clearPlaylist // 新增
     }
   },
   {
