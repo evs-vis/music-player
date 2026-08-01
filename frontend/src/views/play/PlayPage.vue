@@ -11,13 +11,20 @@ const router = useRouter()
 const playerStore = usePlayerStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
-const lyricsContainer = ref(null)
+const lyricsMiniRef = ref(null)
+const lyricsFullRef = ref(null)
 const modeConfig = {
   loop: { icon: 'play', color: '#27ae60' },
   one: { icon: 'replay', color: '#e74c3c' },
   shuffle: { icon: 'exchange', color: '#f39c12' }
 }
+// ✅ 是否显示歌词模式
+const showLyrics = ref(false)
 
+// ✅ 点击封面区域切换
+const toggleLyrics = () => {
+  showLyrics.value = !showLyrics.value
+}
 // 播放列表弹层开关
 const showPlaylistSheet = ref(false)
 
@@ -130,21 +137,97 @@ watch(
   { immediate: true }
 )
 
-// ✅ 新增：歌词索引变化时滚动
-watch(currentLyricIndex, (newIndex) => {
+// ✅ 歌词索引变化时平滑滚动到当前行（居中）
+watch(currentLyricIndex, () => {
   nextTick(() => {
-    const container = lyricsContainer.value
-    if (!container || newIndex < 0) return
-
-    const activeLine = container.querySelector('.lyric-line.active')
-    if (activeLine) {
-      activeLine.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      })
-    }
+    const container = showLyrics.value
+      ? lyricsFullRef.value
+      : lyricsMiniRef.value
+    if (container) scrollToLine(container)
   })
 })
+
+// ✅ 切换 唱片/歌词 模式后，让当前行立即居中
+watch(showLyrics, () => {
+  nextTick(() => {
+    const container = showLyrics.value
+      ? lyricsFullRef.value
+      : lyricsMiniRef.value
+    if (container) scrollToLine(container)
+  })
+})
+
+// ✅ 切换歌曲时重置滚动位置并居中当前行
+watch(
+  () => playerStore.currentSong?.id,
+  () => {
+    nextTick(() => {
+      const mini = lyricsMiniRef.value
+      const full = lyricsFullRef.value
+      if (mini) {
+        mini.scrollTop = 0
+        scrollToLine(mini)
+      }
+      if (full) {
+        full.scrollTop = 0
+        scrollToLine(full)
+      }
+    })
+  }
+)
+
+// ✅ 歌词滚动动画（按容器独立管理，切换模式/快速跳转时不会互相打架）
+const scrollAnimFrames = new WeakMap()
+
+function scrollToLine(container) {
+  const activeLine = container.querySelector('.lyric-line.active')
+  if (!activeLine) return
+
+  const containerRect = container.getBoundingClientRect()
+  const lineRect = activeLine.getBoundingClientRect()
+
+  // ✅ 基于容器相对位置计算目标，不受 offsetParent 影响，居中更准确
+  const targetTop =
+    container.scrollTop +
+    lineRect.top -
+    containerRect.top -
+    (containerRect.height - lineRect.height) / 2
+
+  // 边界夹紧，避免超出可滚动范围
+  const maxScroll = container.scrollHeight - container.clientHeight
+  const target = Math.min(Math.max(targetTop, 0), maxScroll)
+  const start = container.scrollTop
+  const distance = target - start
+  if (Math.abs(distance) < 1) return
+
+  // 取消上一次未完成的动画
+  const prev = scrollAnimFrames.get(container)
+  if (prev !== undefined) cancelAnimationFrame(prev)
+
+  // 尊重系统"减弱动态效果"
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+    container.scrollTop = target
+    return
+  }
+
+  const duration = 300
+  let startTime = null
+
+  function animate(currentTime) {
+    if (startTime === null) startTime = currentTime
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const ease = 1 - Math.pow(1 - progress, 3)
+    container.scrollTop = start + distance * ease
+    if (progress < 1) {
+      scrollAnimFrames.set(container, requestAnimationFrame(animate))
+    } else {
+      scrollAnimFrames.delete(container)
+    }
+  }
+  scrollAnimFrames.set(container, requestAnimationFrame(animate))
+}
+
 onMounted(() => {
   if (authStore.isLoggedIn) {
     favoritesStore.loadFavorites()
@@ -175,45 +258,56 @@ onMounted(() => {
     </header>
 
     <!-- 歌曲信息与封面 -->
-    <main class="play-main">
-      <div
-        class="album-art-wrapper"
-        :class="{ 'is-paused': !playerStore.isPlaying }"
-      >
-        <div class="album-art">
-          <van-image
-            :src="currentSong.cover"
-            width="100%"
-            height="100%"
-            fit="cover"
-            radius="12px"
-          />
-          <!-- 黑胶唱片覆盖层 -->
-          <div class="vinyl-overlay" />
+    <main class="play-main" @click="toggleLyrics">
+      <!-- ✅ 唱片模式 -->
+      <template v-if="!showLyrics">
+        <div
+          class="album-art-wrapper"
+          :class="{ 'is-paused': !playerStore.isPlaying }"
+        >
+          <div class="album-art">
+            <van-image
+              :src="currentSong.cover"
+              width="100%"
+              height="100%"
+              fit="cover"
+              radius="12px"
+            />
+            <div class="vinyl-overlay" />
+          </div>
         </div>
-      </div>
 
-      <div class="song-info">
-        <h1 class="song-title">{{ currentSong.title }}</h1>
-        <p class="song-artist">{{ currentSong.artist }}</p>
-      </div>
+        <!-- 唱片模式的小歌词 -->
+        <div class="lyrics-container lyrics-mini" ref="lyricsMiniRef">
+          <template v-if="currentSong.lyrics?.length">
+            <p
+              v-for="(line, index) in currentSong.lyrics"
+              :key="index"
+              class="lyric-line"
+              :class="{ active: index === currentLyricIndex }"
+            >
+              {{ line.text }}
+            </p>
+          </template>
+          <p v-else class="no-lyrics">暂无歌词</p>
+        </div>
+      </template>
 
-      <!-- 歌词区域 -->
-      <div class="lyrics-container" ref="lyricsContainer">
-        <div v-if="currentSong.lyrics?.length" class="lyrics-list">
+      <!-- ✅ 歌词模式（铺满） -->
+      <div v-else class="lyrics-full" ref="lyricsFullRef">
+        <template v-if="currentSong.lyrics?.length">
           <p
             v-for="(line, index) in currentSong.lyrics"
             :key="index"
-            class="lyric-line"
+            class="lyric-line lyric-line-lg"
             :class="{ active: index === currentLyricIndex }"
           >
             {{ line.text }}
           </p>
-        </div>
+        </template>
         <p v-else class="no-lyrics">暂无歌词</p>
       </div>
     </main>
-
     <!-- 底部控制面板 -->
     <footer class="play-footer">
       <div class="glass-panel">
@@ -312,7 +406,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background-color: #000;
-  overflow: auto;
+  // overflow: auto;
+  overflow: hidden;
   color: #fff;
   &::-webkit-scrollbar {
     display: none;
@@ -340,7 +435,7 @@ onMounted(() => {
   align-items: center;
   padding: $md $safe-margin;
   margin-top: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 8px;
 }
 
 .header-btn {
@@ -391,6 +486,7 @@ onMounted(() => {
 // 主要内容
 .play-main {
   // min-height: 100vh;
+  min-height: 0;
   position: relative;
   z-index: 10;
   flex: 1;
@@ -400,6 +496,7 @@ onMounted(() => {
   justify-content: center;
   padding: 0 $safe-margin;
   gap: $lg;
+  overflow: hidden;
 }
 
 // 专辑封面
@@ -422,6 +519,8 @@ onMounted(() => {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   position: relative;
   animation: rotate-slow 20s linear infinite;
+  margin-top: 32px;
+  margin-bottom: 8px;
 }
 
 .vinyl-overlay {
@@ -441,40 +540,56 @@ onMounted(() => {
   }
 }
 
-// 歌曲信息
-.song-info {
-  text-align: center;
-  max-width: 280px;
-  margin-top: -4px;
-}
-
-.song-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  margin: 30px 0 $xs;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-artist {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0;
-}
-
 // 歌词区域
 .lyrics-container {
+  margin-top: 32px;
   width: 100%;
-  max-height: 60px;
+  max-height: 80px;
   overflow-y: auto;
   text-align: center;
-  scroll-behavior: smooth; // ✅ 平滑滚动
-  padding: 0 $sm;
-  mask-image: linear-gradient(to bottom, black 60%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
+  // 上下留出半屏空白，保证首行/末行也能滚动到正中间
+  padding: 40px 0;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 20%,
+    black 80%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 20%,
+    black 80%,
+    transparent
+  );
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 唱片模式小歌词
+.lyrics-mini {
+  max-height: 100px;
+  overflow-y: auto;
+  width: 100%;
+  text-align: center;
+  transition: opacity 0.3s ease;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 歌词模式铺满
+.lyrics-full {
+  height: 200px;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  text-align: center;
+  padding: 50% 0;
 
   &::-webkit-scrollbar {
     display: none;
@@ -483,16 +598,21 @@ onMounted(() => {
 
 .lyric-line {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 4px 0;
-  transition:
-    color 0.3s,
-    font-size 0.3s;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 4px 0;
 
   &.active {
-    color: $primary-color;
-    font-size: 16px;
+    color: #27ae60;
     font-weight: 600;
+  }
+}
+
+.lyric-line-lg {
+  font-size: 16px;
+  padding: 8px 0;
+
+  &.active {
+    font-size: 18px;
   }
 }
 

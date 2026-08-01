@@ -13,6 +13,7 @@ export const usePlayerStore = defineStore(
     const duration = ref(0)
     const playMode = ref('loop') // loop | one | shuffle
     const volume = ref(parseFloat(localStorage.getItem('volume') || '1'))
+    const lastVolume = ref(1)
     const seekTime = ref(null)
 
     // ===== getters =====
@@ -178,6 +179,7 @@ export const usePlayerStore = defineStore(
       duration,
       playMode,
       volume,
+      lastVolume,
       seekTime,
       hasCurrentSong,
       progress,
