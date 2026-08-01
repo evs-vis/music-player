@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores'
 import { useRouter } from 'vue-router'
-
+defineEmits(['click', 'showPlaylist'])
 const playerStore = usePlayerStore()
 const router = useRouter()
 const showPlaylist = ref(false)
@@ -40,8 +40,14 @@ const goPlayPage = () => {
       <div class="artist">{{ playerStore.currentSong.artist }}</div>
     </div>
     <div class="controls">
+      <button class="prev-btn" @click.stop="playerStore.playPrev()">
+        <van-icon name="arrow-left" size="28" />
+      </button>
       <button class="play-btn" @click.stop="playerStore.togglePlay()">
         <van-icon :name="playIcon" size="28" :class="playIcon" />
+      </button>
+      <button class="next-btn" @click.stop="playerStore.playNext()">
+        <van-icon name="arrow" size="28" />
       </button>
       <button class="list-btn" @click.stop="showPlaylist = true">
         <van-icon name="music-o" size="20" />

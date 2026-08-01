@@ -1,15 +1,23 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores'
 import { useAuthStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
 import { showNotify } from 'vant'
+import MiniPlayer from '@/components/MiniPlayer.vue'
+import PlaylistSheet from '@/components/PlaylistSheet.vue'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
+
+// ✅ 播放列表弹层
+const showPlaylist = ref(false)
+
+// ✅ 是否显示迷你播放器
+const showMiniPlayer = computed(() => playerStore.currentSong !== null)
 
 const playlists = ref([])
 const hotSongs = ref([])
@@ -32,11 +40,9 @@ const goPlaylistDetail = (id) => {
   router.push({ name: 'PlaylistDetail', params: { category: id } })
 }
 
-const playSong = (song, index) => {
-  playerStore.setPlaylist(hotSongs.value, index)
-  playerStore.isPlaying = true
+const playSong = (song) => {
+  playerStore.playSong(song, hotSongs.value)
   if (authStore.isLoggedIn) {
-    // 记录播放历史
     import('@/stores').then(({ useHistoryStore }) => {
       useHistoryStore().addToHistory(song.id)
     })
@@ -48,7 +54,6 @@ const refreshFavorites = async () => {
     favoriteIds.value = []
     return
   }
-
   try {
     const res = await getFavoriteService()
     favoriteIds.value = (res.favorites || []).map((song) => song.id)
@@ -81,6 +86,7 @@ onMounted(() => {
 <template>
   <div class="home-page">
     <app-header></app-header>
+
     <!-- 推荐歌单 -->
     <section class="section">
       <h2 class="section-title">推荐歌单</h2>
@@ -136,6 +142,16 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <!-- ✅ 迷你播放器 -->
+    <MiniPlayer
+      v-if="showMiniPlayer"
+      @click="router.push('/play')"
+      @show-playlist="showPlaylist = true"
+    />
+
+    <!-- ✅ 播放列表弹层 -->
+    <PlaylistSheet v-model:show="showPlaylist" />
   </div>
 </template>
 

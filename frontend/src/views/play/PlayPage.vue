@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores'
 import { useFavoritesStore } from '@/stores'
@@ -47,11 +47,11 @@ const modeIcon = computed(() => {
   }
 })
 
-const modeActive = computed(() => playerStore.playMode !== 'loop')
+const modeActive = computed(() => playerStore.playMode !== 'shuffle')
 
 // 收藏状态
 const isFav = computed(() => {
-  if (!currentSong.value) return false
+  if (!currentSong.value) return false // ← 加这行
   return favoritesStore.favoriteSongs.some((s) => s.id === currentSong.value.id)
 })
 
@@ -71,7 +71,7 @@ const seek = (event) => {
   const rect = event.currentTarget.getBoundingClientRect()
   const x = event.touches ? event.touches[0].clientX : event.clientX
   const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width))
-  playerStore.setProgress(ratio * playerStore.duration)
+  playerStore.seekTo(ratio * playerStore.duration)
 }
 
 // 播放/暂停
@@ -80,8 +80,8 @@ const togglePlay = () => {
 }
 
 // 上下曲
-const prev = () => playerStore.prev()
-const next = () => playerStore.next()
+const prev = () => playerStore.playPrev()
+const next = () => playerStore.playNext()
 
 // 切换模式
 const changeMode = () => playerStore.changeMode()
@@ -93,7 +93,8 @@ const toggleFavorite = async () => {
     return
   }
   try {
-    await favoritesStore.toggleFavorite(currentSong.value)
+    // console.log('currentSong.value', currentSong.value.id)
+    await favoritesStore.toggleFavorite(currentSong.value.id)
   } catch {
     showNotify({ type: 'danger', message: '操作失败' })
   }
@@ -123,6 +124,12 @@ watch(
   },
   { immediate: true }
 )
+
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    favoritesStore.loadFavorites()
+  }
+})
 </script>
 
 <template>

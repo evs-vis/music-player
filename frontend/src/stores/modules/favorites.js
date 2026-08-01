@@ -16,12 +16,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
     favoriteSongs.value = res.favorites
   }
 
-  async function toggleFavorite(song) {
+  async function toggleFavorite(songId) {
     const authStore = useAuthStore()
     if (!authStore.isLoggedIn) {
       throw new Error('请先登录')
     }
-    await updateFavoriteService()
+    await updateFavoriteService(songId)
     // 重新加载收藏列表
     await loadFavorites()
   }

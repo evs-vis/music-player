@@ -11,10 +11,10 @@ const showTabbar = computed(() => {
   return route.meta.showTabbar !== false
 })
 
-// 是否显示迷你播放器（除播放页外都显示）
-const showMiniPlayer = computed(() => {
-  return route.name !== 'Play'
-})
+// // 是否显示迷你播放器（除播放页外都显示）
+// const showMiniPlayer = computed(() => {
+//   return route.name !== 'Play'
+// })
 
 const onTabChange = () => {
   // Vant Tabbar route 模式会自动处理路由跳转
@@ -28,7 +28,7 @@ const onTabChange = () => {
     </div>
 
     <!-- 迷你播放器占位（后续实现） -->
-    <MiniPlayer v-if="showMiniPlayer" />
+    <!-- <MiniPlayer v-if="showMiniPlayer" /> -->
 
     <!-- 底部导航栏 -->
     <van-tabbar v-if="showTabbar" v-model="active" @change="onTabChange" route>

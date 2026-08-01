@@ -1,5 +1,6 @@
+// frontend/src/stores/player.js
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export const usePlayerStore = defineStore(
   'player',
@@ -13,29 +14,72 @@ export const usePlayerStore = defineStore(
     const duration = ref(0)
     const playMode = ref('loop') // loop | one | shuffle
     const volume = ref(parseFloat(localStorage.getItem('volume') || '1'))
+    const seekTime = ref(null)
+
+    // ===== getters =====
+    const hasCurrentSong = computed(() => currentSong.value !== null)
+
+    const progress = computed(() => {
+      if (duration.value === 0) return 0
+      return (currentTime.value / duration.value) * 100
+    })
+
+    const currentTimeFormatted = computed(() => formatTime(currentTime.value))
+    const durationFormatted = computed(() => formatTime(duration.value))
+
+    function formatTime(seconds) {
+      if (!isFinite(seconds) || seconds < 0) return '0:00'
+      const mins = Math.floor(seconds / 60)
+      const secs = Math.floor(seconds % 60)
+      return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
 
     // ===== actions =====
 
     function setPlaylist(songs, startIndex = 0) {
-      playlist.value = songs
+      playlist.value = Array.isArray(songs) ? [...songs] : []
       currentIndex.value = startIndex
-      if (songs.length > 0) {
-        currentSong.value = songs[startIndex]
+      if (playlist.value.length > 0) {
+        // 用新对象触发 watch
+        currentSong.value = { ...playlist.value[startIndex] }
       }
     }
 
     function addToPlaylist(song) {
-      playlist.value.push(song)
+      if (!song) return
+      if (!playlist.value.some((s) => s.id === song.id)) {
+        playlist.value.push(song)
+      }
       if (!currentSong.value) {
-        currentSong.value = song
+        currentSong.value = { ...song }
         currentIndex.value = playlist.value.length - 1
       }
     }
 
-    function playSong(index) {
-      if (index >= 0 && index < playlist.value.length) {
-        currentIndex.value = index
-        currentSong.value = playlist.value[index]
+    function playSong(songOrIndex, list) {
+      if (typeof songOrIndex === 'number') {
+        const index = songOrIndex
+        if (index >= 0 && index < playlist.value.length) {
+          currentIndex.value = index
+          currentSong.value = { ...playlist.value[index] }
+          isPlaying.value = true
+        }
+      } else if (songOrIndex && typeof songOrIndex === 'object') {
+        const song = songOrIndex
+        if (list && Array.isArray(list)) {
+          setPlaylist(
+            list,
+            list.findIndex((s) => s.id === song.id)
+          )
+        } else {
+          const idx = playlist.value.findIndex((s) => s.id === song.id)
+          if (idx === -1) {
+            addToPlaylist(song)
+          } else {
+            currentIndex.value = idx
+          }
+          currentSong.value = { ...song }
+        }
         isPlaying.value = true
       }
     }
@@ -44,19 +88,27 @@ export const usePlayerStore = defineStore(
       isPlaying.value = !isPlaying.value
     }
 
-    function next() {
+    function setPlaying(state) {
+      isPlaying.value = !!state
+    }
+
+    function playNext() {
       if (playlist.value.length === 0) return
       if (playMode.value === 'shuffle') {
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
       } else {
         currentIndex.value = (currentIndex.value + 1) % playlist.value.length
       }
-      currentSong.value = playlist.value[currentIndex.value]
+      currentSong.value = { ...playlist.value[currentIndex.value] }
       isPlaying.value = true
     }
 
-    function prev() {
+    function playPrev() {
       if (playlist.value.length === 0) return
+      if (currentTime.value > 3) {
+        seekTime.value = 0
+        return
+      }
       if (playMode.value === 'shuffle') {
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
       } else {
@@ -64,12 +116,25 @@ export const usePlayerStore = defineStore(
           (currentIndex.value - 1 + playlist.value.length) %
           playlist.value.length
       }
-      currentSong.value = playlist.value[currentIndex.value]
+      currentSong.value = { ...playlist.value[currentIndex.value] }
       isPlaying.value = true
     }
 
-    function setProgress(time) {
+    function prev() {
+      playPrev()
+    }
+
+    function next() {
+      playNext()
+    }
+
+    function seekTo(time) {
+      seekTime.value = time
       currentTime.value = time
+    }
+
+    function setProgress(time) {
+      seekTo(time)
     }
 
     function setVolume(vol) {
@@ -83,24 +148,21 @@ export const usePlayerStore = defineStore(
       playMode.value = modes[(idx + 1) % modes.length]
     }
 
-    // 新增：从播放列表中移除指定索引的歌曲
     function removeFromPlaylist(index) {
-      if (playlist.value.length <= 1) return // 至少保留一首
+      if (playlist.value.length <= 1) return
       playlist.value.splice(index, 1)
-
-      // 调整当前索引
       if (index < currentIndex.value) {
         currentIndex.value--
       } else if (index === currentIndex.value) {
-        // 如果删除的是当前播放的歌曲，切换到下一首（或上一首）
         if (currentIndex.value >= playlist.value.length) {
           currentIndex.value = playlist.value.length - 1
         }
-        currentSong.value = playlist.value[currentIndex.value] || null
+        currentSong.value = playlist.value[currentIndex.value]
+          ? { ...playlist.value[currentIndex.value] }
+          : null
       }
     }
 
-    // 新增：清空播放列表
     function clearPlaylist() {
       playlist.value = []
       currentIndex.value = -1
@@ -108,7 +170,6 @@ export const usePlayerStore = defineStore(
       isPlaying.value = false
     }
 
-    // ===== 暴露 =====
     return {
       currentSong,
       playlist,
@@ -118,22 +179,31 @@ export const usePlayerStore = defineStore(
       duration,
       playMode,
       volume,
+      seekTime,
+      hasCurrentSong,
+      progress,
+      currentTimeFormatted,
+      durationFormatted,
       setPlaylist,
       addToPlaylist,
       playSong,
       togglePlay,
-      next,
+      setPlaying,
+      playNext,
+      playPrev,
       prev,
+      next,
+      seekTo,
       setProgress,
       setVolume,
       changeMode,
-      removeFromPlaylist, // 新增
-      clearPlaylist // 新增
+      removeFromPlaylist,
+      clearPlaylist
     }
   },
   {
     persist: {
-      paths: ['volume', 'playMode', 'playlist', 'currentIndex', 'currentSong']
+      paths: ['volume', 'playMode']
     }
   }
 )

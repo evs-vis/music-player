@@ -23,7 +23,7 @@ export const useHistoryStore = defineStore('history', () => {
   async function addToHistory(songId) {
     const authStore = useAuthStore()
     if (!authStore.isLoggedIn) return
-    await updateHistoryService()
+    await updateHistoryService(songId)
     await loadHistory() // 直接调用 loadHistory 函数
   }
 
