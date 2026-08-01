@@ -1,24 +1,23 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
-import { usePlayerStore } from '@/stores'
-// import { useAuthStore } from '@/stores/auth'
-// import { useFavoritesStore } from '@/stores/favorites'
-import { showNotify } from 'vant'
-
+import { usePlayerStore, useAuthStore, useSearchHistoryStore } from '@/stores'
+import { showNotify, showToast } from 'vant'
+import { getSongsService } from '@/api/playlist'
 const router = useRouter()
 const playerStore = usePlayerStore()
-// const authStore = useAuthStore()
+const authStore = useAuthStore()
+const searchHistoryStore = useSearchHistoryStore()
 // const favoritesStore = useFavoritesStore()
 
 const searchText = ref('')
 const searchResults = ref([])
 const loading = ref(false)
-
-// 模拟最近搜索（后续可接入 localStorage 持久化）
-const recentSearches = ref(['周杰伦', '陈奕迅', 'Lo-fi Beats', '春日限定'])
-
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    searchHistoryStore.loadHistory()
+  }
+})
 // 模拟搜索热榜
 const hotList = ref([
   { rank: 1, title: '晴天', artist: '周杰伦', album: '叶惠美', hot: true },
@@ -63,8 +62,9 @@ watch(searchText, (val) => {
   timer = setTimeout(async () => {
     loading.value = true
     try {
-      const res = await axios.get('/api/songs', { params: { q: val.trim() } })
-      searchResults.value = res.data.songs
+      const res = await getSongsService({ q: val.trim() })
+      // console.log(res)
+      searchResults.value = res.songs
     } catch {
       showNotify({ type: 'danger', message: '搜索失败' })
     } finally {
@@ -78,41 +78,44 @@ const doSearch = async (keyword) => {
   searchText.value = keyword
   loading.value = true
   try {
-    const res = await axios.get('/api/songs', { params: { q: keyword } })
-    searchResults.value = res.data.songs
+    const res = await getSongsService({ q: keyword.trim() })
+    searchResults.value = res.songs
+    if (authStore.isLoggedIn) {
+      searchHistoryStore.addHistory(keyword)
+      // console.log('添加搜索历史：', keyword)
+    }
   } catch {
     showNotify({ type: 'danger', message: '搜索失败' })
+    searchResults.value = []
   } finally {
     loading.value = false
   }
-  // 将关键词存入最近搜索（去重前置）
-  addRecentSearch(keyword)
 }
 
-const addRecentSearch = (keyword) => {
-  const index = recentSearches.value.indexOf(keyword)
-  if (index > -1) {
-    recentSearches.value.splice(index, 1)
+const clearHistorySearches = async () => {
+  loading.value = true
+  try {
+    await searchHistoryStore.clearHistory()
+    showToast('已清空搜索历史')
+  } finally {
+    loading.value = false
   }
-  recentSearches.value.unshift(keyword)
-  if (recentSearches.value.length > 8) recentSearches.value.pop()
 }
-
-const clearRecentSearches = () => {
-  recentSearches.value = []
-}
-
 // 播放歌曲
 const playSong = (song) => {
   playerStore.setPlaylist([song], 0)
   playerStore.isPlaying = true
 }
-
+// 添加到播放列表
+const addToPlaylist = (song) => {
+  playerStore.addToPlaylist(song)
+  showToast('已添加到播放列表')
+}
 // 播放热榜中的歌曲（需根据标题查歌，实际应改为通过ID）
 const playHotItem = async (item) => {
   try {
-    const res = await axios.get('/api/songs', { params: { q: item.title } })
-    const song = res.data.songs[0]
+    const res = await getSongsService({ q: item.title })
+    const song = res.songs[0]
     if (song) {
       playSong(song)
     } else {
@@ -160,6 +163,9 @@ const goCategory = (catName) => {
           class="song-item glass-card"
           @click="playSong(song)"
         >
+          <button class="add-btn" @click.stop="addToPlaylist(song)">
+            <van-icon name="add-o" size="20" color="#27ae60" />
+          </button>
           <van-image
             :src="song.cover"
             width="48"
@@ -179,14 +185,14 @@ const goCategory = (catName) => {
     <!-- 默认浏览内容（未输入搜索词） -->
     <div v-else class="browse-content">
       <!-- 最近搜索 -->
-      <section class="section" v-if="recentSearches.length">
+      <section class="section" v-if="searchHistoryStore.searchHistory.length">
         <div class="section-header">
           <h2 class="section-title">最近搜索</h2>
-          <van-icon name="delete-o" size="20" @click="clearRecentSearches" />
+          <van-icon name="delete-o" size="20" @click="clearHistorySearches" />
         </div>
         <div class="tag-cloud">
           <span
-            v-for="kw in recentSearches"
+            v-for="kw in searchHistoryStore.searchHistory"
             :key="kw"
             class="tag"
             @click="doSearch(kw)"
@@ -436,6 +442,22 @@ const goCategory = (catName) => {
 }
 
 // 搜索结果歌曲列表
+.add-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:active {
+    background: rgba(39, 174, 96, 0.2);
+  }
+}
 .song-list {
   display: flex;
   flex-direction: column;

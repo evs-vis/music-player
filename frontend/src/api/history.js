@@ -12,3 +12,18 @@ export const getHistoryService = () => {
 export const deleteHistoryService = () => {
   return request.delete(`/api/user/history/`)
 }
+
+//搜索记录
+
+//获取搜索历史
+export const getSearchHistoryService = () => {
+  return request('/api/user/search-history')
+}
+//添加搜索历史
+export const updateSearchHistoryService = (keyword) => {
+  return request.post('/api/user/search-history', { keyword })
+}
+//清空搜索历史
+export const deleteSearchHistoryService = () => {
+  return request.delete(`/api/user/search-history/`)
+}

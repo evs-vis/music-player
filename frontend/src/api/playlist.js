@@ -4,6 +4,6 @@ export const getPlaylistsService = () => {
   return request.get('/api/playlists')
 }
 
-export const getSongsService = () => {
-  return request.get('/api/songs')
+export const getSongsService = (params) => {
+  return request.get('/api/songs', { params })
 }

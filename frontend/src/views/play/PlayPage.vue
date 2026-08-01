@@ -12,6 +12,12 @@ const playerStore = usePlayerStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 
+const modeConfig = {
+  loop: { icon: 'orders-o', color: '#27ae60' },
+  one: { icon: 'replay', color: '#e74c3c' },
+  shuffle: { icon: 'exchange', color: '#f39c12' }
+}
+
 // 播放列表弹层开关
 const showPlaylistSheet = ref(false)
 
@@ -36,18 +42,17 @@ const formatTime = (seconds) => {
 }
 
 // 播放模式图标映射
-const modeIcon = computed(() => {
-  switch (playerStore.playMode) {
-    case 'shuffle':
-      return 'shuffle'
-    case 'one':
-      return 'replay'
-    default:
-      return 'replay'
-  }
-})
+const modeIcon = computed(
+  () => modeConfig[playerStore.playMode]?.icon || 'orders-o'
+)
+const modeColor = computed(
+  () => modeConfig[playerStore.playMode]?.color || '#27ae60'
+)
+// const modeText = computed(
+//   () => modeConfig[playerStore.playMode]?.text || '列表循环'
+// )
 
-const modeActive = computed(() => playerStore.playMode !== 'shuffle')
+const modeActive = computed(() => true)
 
 // 收藏状态
 const isFav = computed(() => {
@@ -219,9 +224,6 @@ onMounted(() => {
 
         <!-- 播放控制 -->
         <div class="controls">
-          <button @click="changeMode" :class="{ active: modeActive }">
-            <van-icon :name="modeIcon" size="24" />
-          </button>
           <div class="main-buttons">
             <button @click="prev">
               <van-icon name="arrow-left" size="36" />
@@ -238,9 +240,6 @@ onMounted(() => {
               <van-icon name="arrow" size="36" />
             </button>
           </div>
-          <button @click="changeMode" :class="{ active: modeActive }">
-            <van-icon :name="modeIcon" size="24" />
-          </button>
         </div>
 
         <!-- 底部操作栏与音量 -->
@@ -278,8 +277,8 @@ onMounted(() => {
             <button @click="showPlaylistSheet = true">
               <van-icon name="add-o" size="20" color="#fff" />
             </button>
-            <button>
-              <van-icon name="share-o" size="20" color="#fff" />
+            <button @click="changeMode" :class="{ active: modeActive }">
+              <van-icon :name="modeIcon" :color="modeColor" size="24" />
             </button>
           </div>
         </div>
@@ -554,7 +553,7 @@ onMounted(() => {
 // 控制按钮
 .controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
 
   button {
