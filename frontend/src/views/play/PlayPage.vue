@@ -13,7 +13,7 @@ const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 
 const modeConfig = {
-  loop: { icon: 'orders-o', color: '#27ae60' },
+  loop: { icon: 'play', color: '#27ae60' },
   one: { icon: 'replay', color: '#e74c3c' },
   shuffle: { icon: 'exchange', color: '#f39c12' }
 }
@@ -43,7 +43,7 @@ const formatTime = (seconds) => {
 
 // 播放模式图标映射
 const modeIcon = computed(
-  () => modeConfig[playerStore.playMode]?.icon || 'orders-o'
+  () => modeConfig[playerStore.playMode]?.icon || 'play'
 )
 const modeColor = computed(
   () => modeConfig[playerStore.playMode]?.color || '#27ae60'
@@ -275,7 +275,7 @@ onMounted(() => {
           </div>
           <div class="right-actions">
             <button @click="showPlaylistSheet = true">
-              <van-icon name="add-o" size="20" color="#fff" />
+              <van-icon name="orders-o" size="20" color="#fff" />
             </button>
             <button @click="changeMode" :class="{ active: modeActive }">
               <van-icon :name="modeIcon" :color="modeColor" size="24" />
@@ -297,8 +297,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background-color: #000;
-  overflow: hidden;
+  overflow: auto;
   color: #fff;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 // 模糊背景
@@ -321,7 +324,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: $md $safe-margin;
-  margin-top: 12px;
+  margin-top: 16px;
+  margin-bottom: 32px;
 }
 
 .header-btn {
@@ -371,6 +375,7 @@ onMounted(() => {
 
 // 主要内容
 .play-main {
+  // min-height: 100vh;
   position: relative;
   z-index: 10;
   flex: 1;
@@ -385,7 +390,7 @@ onMounted(() => {
 // 专辑封面
 .album-art-wrapper {
   width: 100%;
-  max-width: 280px;
+  max-width: 220px;
   aspect-ratio: 1;
   transition: animation-play-state 0.5s;
 
@@ -425,20 +430,21 @@ onMounted(() => {
 .song-info {
   text-align: center;
   max-width: 280px;
+  margin-top: -4px;
 }
 
 .song-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: #fff;
-  margin: 0 0 $xs;
+  margin: 30px 0 $xs;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .song-artist {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.7);
   margin: 0;
@@ -447,7 +453,7 @@ onMounted(() => {
 // 歌词区域
 .lyrics-container {
   width: 100%;
-  max-height: 80px;
+  max-height: 60px;
   overflow-y: auto;
   text-align: center;
   padding: 0 $sm;
@@ -483,7 +489,7 @@ onMounted(() => {
 .play-footer {
   position: relative;
   z-index: 10;
-  padding: 0 $safe-margin $xl;
+  padding: 0 $safe-margin $md;
 }
 
 .glass-panel {
@@ -492,10 +498,10 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(30px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 24px;
-  padding: $lg;
+  padding: $md;
   display: flex;
   flex-direction: column;
-  gap: $lg;
+  gap: $md;
 }
 
 // 进度条
@@ -579,11 +585,11 @@ onMounted(() => {
 .main-buttons {
   display: flex;
   align-items: center;
-  gap: $lg;
+  gap: $md;
 
   .play-btn {
-    width: 72px;
-    height: 72px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: $primary-color;
     display: flex;

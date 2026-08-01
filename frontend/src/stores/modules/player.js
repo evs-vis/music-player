@@ -1,4 +1,3 @@
-// frontend/src/stores/player.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
