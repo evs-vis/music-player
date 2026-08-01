@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores'
 import { useFavoritesStore } from '@/stores'
@@ -11,7 +11,7 @@ const router = useRouter()
 const playerStore = usePlayerStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
-
+const lyricsContainer = ref(null)
 const modeConfig = {
   loop: { icon: 'play', color: '#27ae60' },
   one: { icon: 'replay', color: '#e74c3c' },
@@ -130,6 +130,21 @@ watch(
   { immediate: true }
 )
 
+// ✅ 新增：歌词索引变化时滚动
+watch(currentLyricIndex, (newIndex) => {
+  nextTick(() => {
+    const container = lyricsContainer.value
+    if (!container || newIndex < 0) return
+
+    const activeLine = container.querySelector('.lyric-line.active')
+    if (activeLine) {
+      activeLine.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+    }
+  })
+})
 onMounted(() => {
   if (authStore.isLoggedIn) {
     favoritesStore.loadFavorites()
@@ -184,7 +199,7 @@ onMounted(() => {
       </div>
 
       <!-- 歌词区域 -->
-      <div class="lyrics-container">
+      <div class="lyrics-container" ref="lyricsContainer">
         <div v-if="currentSong.lyrics?.length" class="lyrics-list">
           <p
             v-for="(line, index) in currentSong.lyrics"
@@ -456,6 +471,7 @@ onMounted(() => {
   max-height: 60px;
   overflow-y: auto;
   text-align: center;
+  scroll-behavior: smooth; // ✅ 平滑滚动
   padding: 0 $sm;
   mask-image: linear-gradient(to bottom, black 60%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
