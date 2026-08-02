@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
 import { useAuthStore } from './auth'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
+
 export const useFavoritesStore = defineStore('favorites', () => {
   // 1. state
   const favoriteSongs = ref([])

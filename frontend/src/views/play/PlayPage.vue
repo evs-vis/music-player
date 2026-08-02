@@ -494,7 +494,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 $safe-margin;
+  padding: 0 50px;
   gap: $lg;
   overflow: hidden;
 }

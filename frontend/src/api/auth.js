@@ -16,4 +16,9 @@ export const userRegisterService = (username, password) => {
   })
 }
 
-//
+//用户修改密码
+export const userChangePwdService = (data) => {
+  return request.put('/api/user/password', {
+    data
+  })
+}

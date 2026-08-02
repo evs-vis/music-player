@@ -59,6 +59,12 @@ const routes = [
     name: 'Register',
     component: () => import('@/views/register/RegisterPage.vue'),
     meta: { title: '注册', showTabbar: false }
+  },
+  {
+    path: '/changePwd',
+    name: 'ChangePwd',
+    component: () => import('@/views/changePwd/ChangePwd.vue'),
+    meta: { title: '修改密码', showTabbar: false, requiresAuth: true }
   }
 ]
 

@@ -34,13 +34,13 @@ instance.interceptors.response.use(
       router.push('/login')
     }
 
-    showNotify({
-      type: 'danger',
-      message:
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        '请求失败，请重试'
-    })
+    // showNotify({
+    //   type: 'danger',
+    //   message:
+    //     error.response?.data?.message ||
+    //     error.response?.data?.error ||
+    //     '请求失败，请重试'
+    // })
     return Promise.reject(error)
   }
 )

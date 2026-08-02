@@ -6,6 +6,8 @@ import router from './router'
 
 // 引入 Vant 全局基础样式
 import 'vant/lib/index.css'
+import '@/styles/notify.css'
+
 const app = createApp(App)
 
 app.use(pinia)

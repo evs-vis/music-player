@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { userRegisterService, userLoginService } from '@/api/auth'
+import {
+  userRegisterService,
+  userLoginService,
+  userChangePwdService
+} from '@/api/auth'
 
 export const useAuthStore = defineStore(
   'auth-store',
@@ -14,6 +18,9 @@ export const useAuthStore = defineStore(
       return await userRegisterService(username, password)
     }
 
+    async function changePwd(data) {
+      return await userChangePwdService(data)
+    }
     async function login(username, password) {
       const data = await userLoginService(username, password)
       token.value = data.token || ''
@@ -32,7 +39,8 @@ export const useAuthStore = defineStore(
       isLoggedIn,
       register,
       login,
-      logout
+      logout,
+      changePwd
     }
   },
   {

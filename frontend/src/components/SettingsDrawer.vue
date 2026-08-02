@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores'
 import { showNotify } from 'vant'
-
+import { useRouter } from 'vue-router'
 defineProps({
   show: {
     type: Boolean,
@@ -11,27 +11,45 @@ defineProps({
 })
 
 const emit = defineEmits(['update:show'])
-
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 关闭抽屉
 const close = () => {
+  console.log('🔹 关闭抽屉')
   emit('update:show', false)
 }
 
 // 退出登录
 const logout = () => {
   close()
+
+  // 延迟执行退出登录，让抽屉关闭动画完成
   setTimeout(() => {
     authStore.logout()
-    showNotify({ type: 'success', message: '已退出登录' })
+    // 延迟显示通知，确保通知在正确的上下文显示
+    setTimeout(() => {
+      showNotify({
+        type: 'success',
+        message: '已退出登录',
+        duration: 2000
+        // zIndex: 9999
+      })
+    }, 100)
   }, 300)
 }
 
 // 设置菜单分组
 const accountMenus = [
   { icon: 'user-o', label: '个人资料设置', action: () => {} },
-  { icon: 'shield-o', label: '账号与安全', action: () => {} }
+  {
+    icon: 'shield-o',
+    label: '账号与安全',
+    action: () => {
+      router.push('/changePwd')
+      close()
+    }
+  }
 ]
 
 const generalMenus = [
