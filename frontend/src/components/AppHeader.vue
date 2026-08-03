@@ -24,7 +24,13 @@ const handleLogin = () => {
 <template>
   <div class="app-header">
     <div class="left">
-      <van-image :src="logoUrl" width="40" height="40" fit="contain" />
+      <van-image
+        :src="logoUrl"
+        width="31"
+        height="31"
+        radius="30%"
+        fit="contain"
+      />
       <h1 class="title">Music Player</h1>
     </div>
 
@@ -67,7 +73,7 @@ const handleLogin = () => {
     font-weight: 700;
     color: #006d37;
     white-space: nowrap;
-    margin: 0;
+    margin: 5px;
   }
 
   .right {

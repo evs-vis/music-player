@@ -10,6 +10,9 @@ import {
 import defaultAvatar from '@/assets/avatar.jpg'
 import { uploadAvatarService } from '@/api/auth'
 import { showToast, showNotify } from 'vant'
+
+import SongListPopup from '@/components/SongListPopup.vue'
+
 const router = useRouter()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
@@ -47,8 +50,25 @@ const goFavorites = () => {
   showFavorites.value = !showFavorites.value
 }
 
+const goHistory = () => {
+  if (!isLoggedIn.value) {
+    goLogin()
+    return
+  }
+  // 可以跳转到一个专门的收藏列表页，这里简单处理
+  showHistory.value = !showHistory.value
+}
 const showFavorites = ref(false)
+const showHistory = ref(false)
 
+// 点击播放
+const playFromPopup = (song) => {
+  playerStore.setPlaylist([song], 0)
+  playerStore.isPlaying = true
+  // 关闭弹层
+  showFavorites.value = false
+  showHistory.value = false
+}
 // 设置菜单项
 const menuItems = [
   { icon: 'envelope-o', label: '消息中心', badge: 3, action: () => {} },
@@ -109,10 +129,6 @@ onMounted(() => {
     historyStore.loadHistory()
   }
 })
-const playFromFav = (song) => {
-  playSong(song)
-  showFavorites.value = false
-}
 </script>
 
 <template>
@@ -199,7 +215,7 @@ const playFromFav = (song) => {
       <section class="recent-section" v-if="recentPlays.length">
         <div class="section-header">
           <h3 class="section-title">最近播放</h3>
-          <span class="section-more" @click="goFavorites">查看全部</span>
+          <span class="section-more" @click="goHistory">查看全部</span>
         </div>
         <div class="recent-scroll">
           <div
@@ -276,44 +292,21 @@ const playFromFav = (song) => {
     </template>
 
     <!-- 收藏歌曲弹层（简单展示） -->
-    <van-popup
+    <SongListPopup
       v-model:show="showFavorites"
-      position="bottom"
-      :style="{ height: '60vh', borderRadius: '24px 24px 0 0' }"
-      round
-      closeable
-    >
-      <div class="favorites-popup">
-        <h3 class="popup-title">我喜欢的音乐</h3>
-        <div
-          v-if="favoritesStore.favoriteSongs.length === 0"
-          class="empty-state"
-        >
-          <van-empty description="还没有收藏歌曲" />
-        </div>
-        <div v-else class="fav-list">
-          <div
-            v-for="song in favoritesStore.favoriteSongs"
-            :key="song.id"
-            class="fav-item"
-            @click="playFromFav(song)"
-          >
-            <van-image
-              :src="song.cover"
-              width="44"
-              height="44"
-              radius="8"
-              fit="cover"
-            />
-            <div class="fav-info">
-              <span class="fav-title">{{ song.title }}</span>
-              <span class="fav-artist">{{ song.artist }}</span>
-            </div>
-            <van-icon name="play-circle-o" size="20" color="#27AE60" />
-          </div>
-        </div>
-      </div>
-    </van-popup>
+      title="我喜欢的音乐"
+      :songs="favoritesStore.favoriteSongs"
+      empty-text="还没有收藏歌曲"
+      @play="playFromPopup"
+    />
+    <!-- 历史记录弹层（简单展示） -->
+    <SongListPopup
+      v-model:show="showHistory"
+      title="最近播放"
+      :songs="historyStore.historyList"
+      empty-text="还没有播放记录"
+      @play="playFromPopup"
+    />
   </div>
   <settings-drawer v-model:show="showSettings"></settings-drawer>
 </template>
@@ -653,81 +646,5 @@ const playFromFav = (song) => {
   :deep(.van-cell__title) {
     color: #ba1a1a;
   }
-}
-
-// 收藏弹层
-.favorites-popup {
-  padding: $md $safe-margin;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-}
-
-.popup-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: rgba(#e7ebf0, 0.6);
-  margin-bottom: $md;
-  text-align: center;
-}
-
-.empty-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fav-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: $sm;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.fav-item {
-  display: flex;
-  align-items: center;
-  gap: $md;
-  padding: $sm;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:active {
-    background: rgba(0, 0, 0, 0.03);
-  }
-}
-
-.fav-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.fav-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: rgba(#ffffff, 0.9);
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fav-artist {
-  font-size: 12px;
-  color: $text-secondary;
-  margin-top: 2px;
 }
 </style>

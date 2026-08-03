@@ -1,9 +1,9 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
 import { usePlayerStore, useFavoritesStore, useAuthStore } from '@/stores'
 import { showToast } from 'vant'
+import { getPlaylistsService, getSongsService } from '@/api/playlist'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,11 +27,11 @@ const fetchDetail = async () => {
     const param = route.params.category
     // 获取所有歌单和歌曲
     const [playlistsRes, songsRes] = await Promise.all([
-      axios.get('/api/playlists'),
-      axios.get('/api/songs')
+      getPlaylistsService(),
+      getSongsService()
     ])
-    const allPlaylists = playlistsRes.data.playlists
-    const allSongs = songsRes.data.songs
+    const allPlaylists = playlistsRes.playlists
+    const allSongs = songsRes.songs
 
     // 判断是分类还是歌单 ID
     // 先尝试作为歌单 ID 匹配

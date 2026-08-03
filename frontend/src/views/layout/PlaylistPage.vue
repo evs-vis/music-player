@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { usePlayerStore } from '@/stores'
 import { showToast } from 'vant'
 
@@ -27,10 +27,10 @@ const loading = ref(false)
 const fetchFeatured = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/playlists')
+    const res = await getPlaylistsService()
     // 取第一个歌单作为推荐
-    if (res.data.playlists.length > 0) {
-      featuredPlaylist.value = res.data.playlists[0]
+    if (res.playlists.length > 0) {
+      featuredPlaylist.value = res.playlists[0]
     }
   } catch {
     // 静默处理
@@ -48,8 +48,8 @@ const goCategory = (cat) => {
 const playFeaturedPlaylist = async () => {
   if (!featuredPlaylist.value) return
   try {
-    const res = await axios.get('/api/songs')
-    const allSongs = res.data.songs
+    const res = await getSongsService()
+    const allSongs = res.songs
     const playlistSongs = featuredPlaylist.value.songIds
       .map((id) => allSongs.find((s) => s.id === id))
       .filter(Boolean)
