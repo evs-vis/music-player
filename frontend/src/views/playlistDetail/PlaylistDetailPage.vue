@@ -2,10 +2,8 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { usePlayerStore } from '@/stores'
-import { useFavoritesStore } from '@/stores'
-import { useAuthStore } from '@/stores'
-import { showNotify } from 'vant'
+import { usePlayerStore, useFavoritesStore, useAuthStore } from '@/stores'
+import { showToast } from 'vant'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +61,7 @@ const fetchDetail = async () => {
     originalSongs.value = playlistInfo.value.songs
   } catch (error) {
     console.error(error)
-    showNotify({ type: 'danger', message: '加载失败' })
+    showToast({ type: 'fail', message: '加载失败' })
   } finally {
     loading.value = false
   }
@@ -81,7 +79,7 @@ watch(
 // 播放全部
 const playAll = () => {
   if (originalSongs.value.length === 0) {
-    showNotify('没有可播放的歌曲')
+    showToast('没有可播放的歌曲')
     return
   }
   playerStore.setPlaylist(originalSongs.value, 0)
@@ -97,13 +95,13 @@ const playSong = (song, index) => {
 // 收藏
 const toggleFav = async (song) => {
   if (!authStore.isLoggedIn) {
-    showNotify('请先登录')
+    showToast('请先登录')
     return
   }
   try {
     await favoritesStore.toggleFavorite(song)
   } catch {
-    showNotify({ type: 'danger', message: '操作失败' })
+    showToast({ type: 'fail', message: '操作失败' })
   }
 }
 

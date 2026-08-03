@@ -1,9 +1,24 @@
 <script setup>
 import logoUrl from '@/assets/logo.png'
 import avatarUrl from '@/assets/avatar.jpg'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores'
+const router = useRouter()
+const authStore = useAuthStore()
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const avatarSrc = computed(() => {
+  const custom = authStore.user?.avatar
+  if (custom) return baseURL + custom
+  return avatarUrl
+})
 const handleLogin = () => {
-  // router.push('/login')
-  console.log('handleLogin')
+  if (!authStore.isLoggedIn) {
+    router.push('/login')
+  }
+  router.push('/mine')
+
+  // console.log('handleLogin')
 }
 </script>
 <template>
@@ -15,9 +30,9 @@ const handleLogin = () => {
 
     <div class="right" @click="handleLogin">
       <van-image
-        :src="avatarUrl"
-        width="40"
-        height="40"
+        :src="avatarSrc"
+        width="31"
+        height="31"
         round
         fit="cover"
         class="avatar"

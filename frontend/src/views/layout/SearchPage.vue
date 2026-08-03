@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useSearchHistoryStore } from '@/stores'
-import { showNotify, showToast } from 'vant'
+import { showToast } from 'vant'
 import { getSongsService } from '@/api/playlist'
 const router = useRouter()
 const playerStore = usePlayerStore()
@@ -66,7 +66,7 @@ watch(searchText, (val) => {
       // console.log(res)
       searchResults.value = res.songs
     } catch {
-      showNotify({ type: 'danger', message: '搜索失败' })
+      showToast({ type: 'fail', message: '搜索失败' })
     } finally {
       loading.value = false
     }
@@ -85,7 +85,7 @@ const doSearch = async (keyword) => {
       // console.log('添加搜索历史：', keyword)
     }
   } catch {
-    showNotify({ type: 'danger', message: '搜索失败' })
+    showToast({ type: 'fail', message: '搜索失败' })
     searchResults.value = []
   } finally {
     loading.value = false
@@ -119,10 +119,10 @@ const playHotItem = async (item) => {
     if (song) {
       playSong(song)
     } else {
-      showNotify('歌曲未找到')
+      showToast('歌曲未找到')
     }
   } catch {
-    showNotify({ type: 'danger', message: '播放失败' })
+    showToast({ type: 'fail', message: '播放失败' })
   }
 }
 

@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores'
-import { showNotify } from 'vant'
+import { showToast } from 'vant'
 import { useRouter } from 'vue-router'
 defineProps({
   show: {
@@ -16,7 +16,6 @@ const authStore = useAuthStore()
 
 // 关闭抽屉
 const close = () => {
-  console.log('🔹 关闭抽屉')
   emit('update:show', false)
 }
 
@@ -29,10 +28,10 @@ const logout = () => {
     authStore.logout()
     // 延迟显示通知，确保通知在正确的上下文显示
     setTimeout(() => {
-      showNotify({
+      showToast({
         type: 'success',
         message: '已退出登录',
-        duration: 2000
+        duration: 1000
         // zIndex: 9999
       })
     }, 100)

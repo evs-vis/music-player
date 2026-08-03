@@ -22,3 +22,12 @@ export const userChangePwdService = (data) => {
     data
   })
 }
+
+// 用户修改头像
+export const uploadAvatarService = (file) => {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  return request.post('/api/user/avatar', formData, {
+    header: { 'Content-Type': 'multipart/form-data' }
+  })
+}

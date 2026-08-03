@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { showNotify, showToast } from 'vant'
+import { showToast } from 'vant'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -18,12 +18,8 @@ const togglePasswordVisible = () => {
 }
 
 const handleRegister = async () => {
-  if (!username.value.trim() || !password.value.trim()) {
-    showNotify({ type: 'warning', message: '请填写完整信息' })
-    return
-  }
   if (!agreement.value) {
-    showNotify({ type: 'warning', message: '请阅读并同意用户协议与隐私政策' })
+    showToast({ type: 'warning', message: '请阅读并同意用户协议与隐私政策' })
     return
   }
   loading.value = true
@@ -32,14 +28,14 @@ const handleRegister = async () => {
     showToast({
       type: 'success',
       message: '注册成功，即将跳转登录',
-      duration: 2000
+      duration: 1000
     })
     setTimeout(() => {
       router.replace('/login')
     }, 1500)
   } catch (error) {
     const msg = error?.response?.data?.error || '注册失败，请重试'
-    showNotify({ type: 'danger', message: msg })
+    showToast({ type: 'fail', message: msg })
   } finally {
     loading.value = false
   }

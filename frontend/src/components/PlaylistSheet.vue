@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { usePlayerStore } from '@/stores'
-import { showNotify } from 'vant'
+import { showToast } from 'vant'
 
 const props = defineProps({
   show: {
@@ -32,7 +32,7 @@ const playSongAt = (index) => {
 // 移除歌曲
 const removeSong = (index) => {
   if (playlist.value.length <= 1) {
-    showNotify({ type: 'warning', message: '播放列表至少保留一首歌曲' })
+    showToast({ type: 'warning', message: '播放列表至少保留一首歌曲' })
     return
   }
   playerStore.removeFromPlaylist(index)

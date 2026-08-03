@@ -1,10 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore } from '@/stores'
-import { useFavoritesStore } from '@/stores'
-import { useAuthStore } from '@/stores'
-import { showNotify } from 'vant'
+import { usePlayerStore, useAuthStore, useFavoritesStore } from '@/stores'
+import { showToast } from 'vant'
 import PlaylistSheet from '@/components/PlaylistSheet.vue'
 
 const router = useRouter()
@@ -101,14 +99,14 @@ const changeMode = () => playerStore.changeMode()
 // 收藏切换
 const toggleFavorite = async () => {
   if (!authStore.isLoggedIn) {
-    showNotify({ type: 'warning', message: '请先登录' })
+    showToast({ type: 'warning', message: '请先登录' })
     return
   }
   try {
     // console.log('currentSong.value', currentSong.value.id)
     await favoritesStore.toggleFavorite(currentSong.value.id)
   } catch {
-    showNotify({ type: 'danger', message: '操作失败' })
+    showToast({ type: 'fail', message: '操作失败' })
   }
 }
 

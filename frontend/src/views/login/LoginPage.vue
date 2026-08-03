@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { showNotify, showToast, showFailToast } from 'vant'
+import { showToast } from 'vant'
 import logoUrl from '@/assets/logo.png'
 
 const router = useRouter()
@@ -14,22 +14,19 @@ const loading = ref(false)
 const passwordVisible = ref(false)
 
 // 登录
+const toastShown = ref(false)
 const handleLogin = async () => {
-  if (!username.value.trim() || !password.value.trim()) {
-    showNotify({ type: 'warning', message: '请输入用户名和密码' })
-    return
-  }
   loading.value = true
   try {
     await authStore.login(username.value.trim(), password.value)
-    showToast({ type: 'success', message: '登录成功' })
-    // showSuccessToast({ message: '登录成功', duration: 1500 })
+    toastShown.value = true
+    showToast({ type: 'success', message: '登录成功', duration: 300 })
     setTimeout(() => {
       router.replace('/home')
     }, 500)
   } catch (error) {
     const msg = error?.response?.data?.error || '登录失败，请重试'
-    showFailToast({ message: msg, position: 'middle' })
+    showToast({ type: 'fail', message: msg, position: 'middle' })
   } finally {
     loading.value = false
   }

@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { usePlayerStore } from '@/stores'
-import { showNotify } from 'vant'
+import { showToast } from 'vant'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
@@ -58,7 +58,7 @@ const playFeaturedPlaylist = async () => {
       playerStore.isPlaying = true
     }
   } catch {
-    showNotify({ type: 'danger', message: '播放失败' })
+    showToast({ type: 'fail', message: '播放失败' })
   }
 }
 

@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores'
-import { showNotify, showToast } from 'vant'
+import { showToast } from 'vant'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -29,12 +29,8 @@ const confirmPwd = (val) => {
 }
 
 const handleSubmit = async () => {
-  if (!password.value || !newPassword.value || !confirmPassword.value) {
-    showNotify({ type: 'warning', message: '请填写完整信息' })
-    return
-  }
   if (newPassword.value !== confirmPassword.value) {
-    showNotify({ type: 'warning', message: '两次密码不一致' })
+    showToast({ type: 'warning', message: '两次密码不一致' })
     return
   }
 
@@ -53,7 +49,7 @@ const handleSubmit = async () => {
     }, 1500)
   } catch (err) {
     const msg = err.response?.data?.error || '修改失败'
-    showNotify({ type: 'danger', message: msg })
+    showToast({ type: 'danger', message: msg })
   } finally {
     loading.value = false
   }

@@ -15,6 +15,8 @@ export const usePlayerStore = defineStore(
     const volume = ref(parseFloat(localStorage.getItem('volume') || '1'))
     const lastVolume = ref(1)
     const seekTime = ref(null)
+    // 在遇到浏览器自动播放限制时，标记需要在用户交互后恢复播放
+    const resumeOnGesture = ref(false)
 
     // ===== getters =====
     const hasCurrentSong = computed(() => currentSong.value !== null)
@@ -142,6 +144,10 @@ export const usePlayerStore = defineStore(
       localStorage.setItem('volume', String(volume.value))
     }
 
+    function setResumeOnGesture(val) {
+      resumeOnGesture.value = !!val
+    }
+
     function changeMode() {
       const modes = ['loop', 'one', 'shuffle']
       const idx = modes.indexOf(playMode.value)
@@ -181,6 +187,8 @@ export const usePlayerStore = defineStore(
       volume,
       lastVolume,
       seekTime,
+      resumeOnGesture,
+      setResumeOnGesture,
       hasCurrentSong,
       progress,
       currentTimeFormatted,

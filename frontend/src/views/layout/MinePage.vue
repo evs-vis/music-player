@@ -1,18 +1,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores'
-import { useFavoritesStore } from '@/stores'
-import { useHistoryStore } from '@/stores'
-import { usePlayerStore } from '@/stores'
-import avatarUrl from '@/assets/avatar.jpg'
-
+import {
+  useAuthStore,
+  usePlayerStore,
+  useFavoritesStore,
+  useHistoryStore
+} from '@/stores'
+import defaultAvatar from '@/assets/avatar.jpg'
+import { uploadAvatarService } from '@/api/auth'
+import { showToast, showNotify } from 'vant'
 const router = useRouter()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
 const historyStore = useHistoryStore()
 const playerStore = usePlayerStore()
-
+const fileInput = ref(null)
 const showSettings = ref(false)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const username = computed(() => authStore.user?.username || '音乐爱好者')
@@ -58,7 +61,48 @@ const menuItems = [
   },
   { icon: 'question-o', label: '帮助与反馈', action: () => {} }
 ]
+// 头像地址
+const avatarSrc = computed(() => {
+  const customAvatar = authStore.user?.avatar
+  if (customAvatar) {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+    return baseURL + customAvatar
+  }
+  return defaultAvatar
+})
+// 点击头像触发文件选择
+const updatePic = () => {
+  if (!isLoggedIn.value) return
+  fileInput.value?.click()
+}
+// 选择文件后上传
+const handleFileChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
 
+  // 校验文件大小（2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    showNotify({ type: 'warning', message: '图片不能超过2MB' })
+    return
+  }
+
+  try {
+    showToast({ message: '上传中...', duration: 0, forbidClick: true })
+    const res = await uploadAvatarService(file)
+    // 更新 store 中的头像路径
+    authStore.user.avatar = res.avatar
+    showToast({ message: '头像更新成功', icon: 'success' })
+  } catch (error) {
+    console.error(error)
+    showNotify({
+      type: 'danger',
+      message: '上传失败，请重试|}'
+    })
+  } finally {
+    // 清除 input 值，以便重复上传同一文件
+    event.target.value = ''
+  }
+}
 onMounted(() => {
   if (isLoggedIn.value) {
     favoritesStore.loadFavorites()
@@ -83,7 +127,7 @@ const playFromFav = (song) => {
     <div v-if="!isLoggedIn" class="login-section">
       <div class="login-card glass-card">
         <van-image
-          :src="avatarUrl"
+          :src="avatarSrc"
           width="80"
           height="80"
           round
@@ -107,10 +151,10 @@ const playFromFav = (song) => {
     <template v-else>
       <!-- 个人信息 -->
       <section class="profile-section">
-        <div class="profile-card glass-card">
+        <div class="profile-card glass-card" @click="updatePic">
           <div class="avatar-wrapper">
             <van-image
-              :src="avatarUrl"
+              :src="avatarSrc"
               width="72"
               height="72"
               round
@@ -124,6 +168,13 @@ const playFromFav = (song) => {
           <h2 class="username">{{ username }}</h2>
           <p class="bio">让音乐点亮生活的每一个角落 🎵</p>
         </div>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="handleFileChange"
+        />
       </section>
 
       <!-- 统计数据 -->
@@ -610,12 +661,15 @@ const playFromFav = (song) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .popup-title {
   font-size: 20px;
   font-weight: 700;
-  color: $text-primary;
+  color: rgba(#e7ebf0, 0.6);
   margin-bottom: $md;
   text-align: center;
 }
@@ -629,10 +683,13 @@ const playFromFav = (song) => {
 
 .fav-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: $sm;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 
   &::-webkit-scrollbar {
     display: none;
@@ -661,7 +718,7 @@ const playFromFav = (song) => {
 .fav-title {
   font-size: 15px;
   font-weight: 500;
-  color: $text-primary;
+  color: rgba(#ffffff, 0.9);
   display: block;
   white-space: nowrap;
   overflow: hidden;

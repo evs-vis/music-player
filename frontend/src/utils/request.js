@@ -1,7 +1,6 @@
 import axios from 'axios'
 import router from '@/router'
 import { useAuthStore } from '@/stores'
-import { showNotify } from 'vant'
 
 // 创建 Axios 实例
 const instance = axios.create({

@@ -1,18 +1,17 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore } from '@/stores'
-import { useAuthStore } from '@/stores'
+import { usePlayerStore, useAuthStore, useHistoryStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
-import { showNotify } from 'vant'
+import { showToast } from 'vant'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlaylistSheet from '@/components/PlaylistSheet.vue'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
-
+const historyStore = useHistoryStore()
 // ✅ 播放列表弹层
 const showPlaylist = ref(false)
 
@@ -32,7 +31,7 @@ const fetchData = async () => {
     playlists.value = plRes.playlists
     hotSongs.value = songRes.songs.slice(0, 10)
   } catch {
-    showNotify({ type: 'danger', message: '数据加载失败' })
+    showToast({ type: 'fail', message: '数据加载失败' })
   }
 }
 
@@ -43,9 +42,7 @@ const goPlaylistDetail = (id) => {
 const playSong = (song) => {
   playerStore.playSong(song, hotSongs.value)
   if (authStore.isLoggedIn) {
-    import('@/stores').then(({ useHistoryStore }) => {
-      useHistoryStore().addToHistory(song.id)
-    })
+    historyStore.addToHistory(song.id)
   }
 }
 
@@ -64,14 +61,14 @@ const refreshFavorites = async () => {
 
 const toggleFav = async (song) => {
   if (!authStore.isLoggedIn) {
-    showNotify({ type: 'warning', message: '请先登录' })
+    showToast({ type: 'warning', message: '请先登录' })
     return
   }
   try {
     await updateFavoriteService(song.id)
     await refreshFavorites()
   } catch {
-    showNotify({ type: 'danger', message: '操作失败' })
+    showToast({ type: 'fail', message: '操作失败' })
   }
 }
 
