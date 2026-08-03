@@ -46,10 +46,7 @@ const clearAll = () => {
 
 // 总时长格式化
 const totalDuration = computed(() => {
-  const total = playlist.value.reduce(
-    (sum, song) => sum + (song.duration || 240),
-    0
-  )
+  const total = playlist.value.reduce((sum, song) => sum + (song.duration || 240), 0)
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   if (hours > 0) {
@@ -79,13 +76,9 @@ const totalDuration = computed(() => {
       <div class="sheet-header">
         <div class="header-info">
           <h2 class="header-title">当前播放列表</h2>
-          <p class="header-meta">
-            {{ playlist.length }} 首歌曲 · 共 {{ totalDuration }}
-          </p>
+          <p class="header-meta">{{ playlist.length }} 首歌曲 · 共 {{ totalDuration }}</p>
         </div>
-        <button class="clear-btn" @click="clearAll" v-if="playlist.length > 0">
-          清空
-        </button>
+        <button class="clear-btn" @click="clearAll" v-if="playlist.length > 0">清空</button>
       </div>
 
       <!-- 歌曲列表 -->
@@ -99,18 +92,9 @@ const totalDuration = computed(() => {
         >
           <!-- 封面 -->
           <div class="song-cover">
-            <van-image
-              :src="song.cover"
-              width="48"
-              height="48"
-              radius="12"
-              fit="cover"
-            />
+            <van-image :src="song.cover" width="48" height="48" radius="12" fit="cover" />
             <!-- 播放中的动画 -->
-            <div
-              v-if="index === currentIndex && playerStore.isPlaying"
-              class="playing-overlay"
-            >
+            <div v-if="index === currentIndex && playerStore.isPlaying" class="playing-overlay">
               <div class="bar" />
               <div class="bar" />
               <div class="bar" />
@@ -119,10 +103,7 @@ const totalDuration = computed(() => {
 
           <!-- 歌曲信息 -->
           <div class="song-info">
-            <p
-              class="song-title"
-              :class="{ 'text-primary': index === currentIndex }"
-            >
+            <p class="song-title" :class="{ 'text-primary': index === currentIndex }">
               {{ song.title }}
             </p>
             <p class="song-artist">{{ song.artist }}</p>

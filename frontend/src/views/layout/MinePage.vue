@@ -1,15 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  useAuthStore,
-  usePlayerStore,
-  useFavoritesStore,
-  useHistoryStore
-} from '@/stores'
+import { useAuthStore, usePlayerStore, useFavoritesStore, useHistoryStore } from '@/stores'
 import defaultAvatar from '@/assets/avatar.jpg'
 import { uploadAvatarService } from '@/api/auth'
-import { showToast, showNotify } from 'vant'
+import { showToast, showNotify, showConfirmDialog } from 'vant'
 
 import SongListPopup from '@/components/SongListPopup.vue'
 
@@ -68,6 +63,27 @@ const playFromPopup = (song) => {
 }
 const showFavorites = ref(false)
 const showHistory = ref(false)
+// 注销账号（#39）：二次确认后删除账号并跳转登录页
+const deleteAccount = async () => {
+  try {
+    await showConfirmDialog({
+      title: '注销账号',
+      message: '确定要注销账号吗？注销后账号及收藏、播放记录将被永久删除，且无法恢复。',
+      confirmButtonText: '确认注销',
+      confirmButtonColor: '#e74c3c'
+    })
+  } catch {
+    return // 用户取消
+  }
+  try {
+    await authStore.deleteAccount()
+    showToast({ type: 'success', message: '账号已注销' })
+    router.replace('/login')
+  } catch (error) {
+    const msg = error?.response?.data?.error || '注销失败，请重试'
+    showToast({ type: 'fail', message: msg })
+  }
+}
 // 设置菜单项
 const menuItems = [
   { icon: 'envelope-o', label: '消息中心', badge: 3, action: () => {} },
@@ -78,7 +94,8 @@ const menuItems = [
       showSettings.value = true
     }
   },
-  { icon: 'question-o', label: '帮助与反馈', action: () => {} }
+  { icon: 'question-o', label: '帮助与反馈', action: () => {} },
+  { icon: 'delete-o', label: '注销账号', danger: true, action: deleteAccount }
 ]
 // 头像地址
 const avatarSrc = computed(() => {
@@ -150,13 +167,7 @@ onMounted(() => {
           class="default-avatar"
         />
         <p class="login-text">登录后享受个性化推荐</p>
-        <van-button
-          round
-          type="primary"
-          block
-          @click="goLogin"
-          class="login-btn"
-        >
+        <van-button round type="primary" block @click="goLogin" class="login-btn">
           立即登录
         </van-button>
       </div>
@@ -168,14 +179,7 @@ onMounted(() => {
       <section class="profile-section">
         <div class="profile-card glass-card" @click="updatePic">
           <div class="avatar-wrapper">
-            <van-image
-              :src="avatarSrc"
-              width="72"
-              height="72"
-              round
-              fit="cover"
-              class="avatar"
-            />
+            <van-image :src="avatarSrc" width="72" height="72" round fit="cover" class="avatar" />
             <div class="edit-badge">
               <van-icon name="edit" size="14" color="#fff" />
             </div>
@@ -224,13 +228,7 @@ onMounted(() => {
             @click="playSong(song)"
           >
             <div class="recent-cover">
-              <van-image
-                :src="song.cover"
-                width="100%"
-                height="100%"
-                fit="cover"
-                radius="8px"
-              />
+              <van-image :src="song.cover" width="100%" height="100%" fit="cover" radius="8px" />
               <div class="play-overlay">
                 <van-icon name="play-circle-o" size="24" color="#fff" />
               </div>
@@ -280,6 +278,7 @@ onMounted(() => {
             :title="item.label"
             :icon="item.icon"
             is-link
+            :class="{ 'danger-cell': item.danger }"
             @click="item.action"
           >
             <template v-if="item.badge" #right-icon>
@@ -644,6 +643,14 @@ onMounted(() => {
 .logout-cell {
   :deep(.van-cell__title) {
     color: #ba1a1a;
+  }
+}
+
+// 危险操作（注销账号）红色样式
+.danger-cell {
+  :deep(.van-cell__title),
+  :deep(.van-cell__left-icon) {
+    color: #e74c3c;
   }
 }
 </style>

@@ -4,10 +4,7 @@ import { useAuthStore } from '@/stores/index'
 const routes = [
   {
     path: '/',
-    redirect: '/home' // 根路径重定向到首页
-  },
-  {
-    path: '/',
+    redirect: '/home', // 根路径重定向到首页
     component: () => import('@/views/layout/index.vue'),
     children: [
       {
@@ -74,7 +71,7 @@ const router = createRouter({
 })
 
 // 路由守卫：检查需要登录的页面
-router.beforeEach((to, from) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore()
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     return '/login'

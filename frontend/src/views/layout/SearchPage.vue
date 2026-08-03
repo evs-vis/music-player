@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useSearchHistoryStore } from '@/stores'
 import { showToast } from 'vant'
@@ -17,6 +17,10 @@ onMounted(() => {
   if (authStore.isLoggedIn) {
     searchHistoryStore.loadHistory()
   }
+})
+// 卸载时清理防抖定时器，避免切页后仍发出一次搜索请求（#21）
+onUnmounted(() => {
+  clearTimeout(timer)
 })
 // 模拟搜索热榜
 const hotList = ref([
@@ -166,13 +170,7 @@ const goCategory = (catName) => {
           <button class="add-btn" @click.stop="addToPlaylist(song)">
             <van-icon name="add-o" size="20" color="#27ae60" />
           </button>
-          <van-image
-            :src="song.cover"
-            width="48"
-            height="48"
-            radius="8"
-            fit="cover"
-          />
+          <van-image :src="song.cover" width="48" height="48" radius="8" fit="cover" />
           <div class="song-info">
             <div class="song-title">{{ song.title }}</div>
             <div class="song-artist">{{ song.artist }}</div>
@@ -205,36 +203,20 @@ const goCategory = (catName) => {
       <section class="section">
         <h2 class="section-title">搜索热榜</h2>
         <div class="hot-list glass-card">
-          <div
-            v-for="item in hotList"
-            :key="item.rank"
-            class="hot-item"
-            @click="playHotItem(item)"
-          >
-            <span class="rank" :class="{ 'rank-top3': item.rank <= 3 }">{{
-              item.rank
-            }}</span>
+          <div v-for="item in hotList" :key="item.rank" class="hot-item" @click="playHotItem(item)">
+            <span class="rank" :class="{ 'rank-top3': item.rank <= 3 }">{{ item.rank }}</span>
             <div class="hot-info">
               <div class="hot-title">
                 {{ item.title }}
                 <span v-if="item.hot" class="badge hot-badge">HOT</span>
-                <van-icon
-                  v-if="item.trend === 'up'"
-                  name="arrow-up"
-                  class="trend-icon"
-                />
+                <van-icon v-if="item.trend === 'up'" name="arrow-up" class="trend-icon" />
               </div>
               <div class="hot-artist">
                 {{ item.artist }}
                 <span v-if="item.album">- {{ item.album }}</span>
               </div>
             </div>
-            <van-icon
-              name="play-circle-o"
-              size="22"
-              color="#27AE60"
-              class="play-icon"
-            />
+            <van-icon name="play-circle-o" size="22" color="#27AE60" class="play-icon" />
           </div>
         </div>
       </section>

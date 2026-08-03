@@ -12,15 +12,17 @@ export const usePlayerStore = defineStore(
     const currentTime = ref(0)
     const duration = ref(0)
     const playMode = ref('loop') // loop | one | shuffle
-    const volume = ref(parseFloat(localStorage.getItem('volume') || '1'))
+    // 音量：localStorage 非法值（NaN/越界）时兜底为 1（#16）
+    const storedVolume = parseFloat(localStorage.getItem('volume') || '1')
+    const volume = ref(Number.isFinite(storedVolume) ? Math.max(0, Math.min(1, storedVolume)) : 1)
     const lastVolume = ref(1)
     const seekTime = ref(null)
+    // 进度条拖动中标记：拖动时抑制 timeupdate 写回，避免进度条回弹（#10）
+    const isDragging = ref(false)
     // 在遇到浏览器自动播放限制时，标记需要在用户交互后恢复播放
     const resumeOnGesture = ref(false)
 
     // ===== getters =====
-    const hasCurrentSong = computed(() => currentSong.value !== null)
-
     const progress = computed(() => {
       if (duration.value === 0) return 0
       return (currentTime.value / duration.value) * 100
@@ -38,12 +40,20 @@ export const usePlayerStore = defineStore(
 
     // ===== actions =====
 
+    // 切换当前歌曲：同步重置进度/时长，避免新歌进度条从旧时间点起跳（#15）
+    function setCurrentSong(song) {
+      currentSong.value = song ? { ...song } : null
+      currentTime.value = 0
+      duration.value = 0
+      seekTime.value = null
+    }
+
     function setPlaylist(songs, startIndex = 0) {
       playlist.value = Array.isArray(songs) ? [...songs] : []
       currentIndex.value = startIndex
       if (playlist.value.length > 0) {
         // 用新对象触发 watch
-        currentSong.value = { ...playlist.value[startIndex] }
+        setCurrentSong(playlist.value[startIndex])
       }
     }
 
@@ -53,7 +63,7 @@ export const usePlayerStore = defineStore(
         playlist.value.push(song)
       }
       if (!currentSong.value) {
-        currentSong.value = { ...song }
+        setCurrentSong(song)
         currentIndex.value = playlist.value.length - 1
       }
     }
@@ -63,7 +73,7 @@ export const usePlayerStore = defineStore(
         const index = songOrIndex
         if (index >= 0 && index < playlist.value.length) {
           currentIndex.value = index
-          currentSong.value = { ...playlist.value[index] }
+          setCurrentSong(playlist.value[index])
           isPlaying.value = true
         }
       } else if (songOrIndex && typeof songOrIndex === 'object') {
@@ -79,8 +89,8 @@ export const usePlayerStore = defineStore(
             addToPlaylist(song)
           } else {
             currentIndex.value = idx
+            setCurrentSong(song)
           }
-          currentSong.value = { ...song }
         }
         isPlaying.value = true
       }
@@ -96,17 +106,21 @@ export const usePlayerStore = defineStore(
 
     function playNext() {
       if (playlist.value.length === 0) return
+      // currentIndex 非法时从第 0 首开始（#17）
+      if (currentIndex.value < 0) currentIndex.value = 0
       if (playMode.value === 'shuffle') {
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
       } else {
         currentIndex.value = (currentIndex.value + 1) % playlist.value.length
       }
-      currentSong.value = { ...playlist.value[currentIndex.value] }
+      setCurrentSong(playlist.value[currentIndex.value])
       isPlaying.value = true
     }
 
     function playPrev() {
       if (playlist.value.length === 0) return
+      // currentIndex 非法时从第 0 首开始（#17）
+      if (currentIndex.value < 0) currentIndex.value = 0
       if (currentTime.value > 3) {
         seekTime.value = 0
         return
@@ -115,19 +129,10 @@ export const usePlayerStore = defineStore(
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
       } else {
         currentIndex.value =
-          (currentIndex.value - 1 + playlist.value.length) %
-          playlist.value.length
+          (currentIndex.value - 1 + playlist.value.length) % playlist.value.length
       }
-      currentSong.value = { ...playlist.value[currentIndex.value] }
+      setCurrentSong(playlist.value[currentIndex.value])
       isPlaying.value = true
-    }
-
-    function prev() {
-      playPrev()
-    }
-
-    function next() {
-      playNext()
     }
 
     function seekTo(time) {
@@ -135,13 +140,9 @@ export const usePlayerStore = defineStore(
       currentTime.value = time
     }
 
-    function setProgress(time) {
-      seekTo(time)
-    }
-
+    // 音量统一由 persist 持久化（paths: ['volume', 'playMode']），无需手动写 localStorage
     function setVolume(vol) {
       volume.value = Math.max(0, Math.min(1, vol))
-      localStorage.setItem('volume', String(volume.value))
     }
 
     function setResumeOnGesture(val) {
@@ -163,9 +164,8 @@ export const usePlayerStore = defineStore(
         if (currentIndex.value >= playlist.value.length) {
           currentIndex.value = playlist.value.length - 1
         }
-        currentSong.value = playlist.value[currentIndex.value]
-          ? { ...playlist.value[currentIndex.value] }
-          : null
+        // 删当前歌后切到下一首，重置进度（#15）
+        setCurrentSong(playlist.value[currentIndex.value] || null)
       }
     }
 
@@ -173,6 +173,9 @@ export const usePlayerStore = defineStore(
       playlist.value = []
       currentIndex.value = -1
       currentSong.value = null
+      currentTime.value = 0
+      duration.value = 0
+      seekTime.value = null
       isPlaying.value = false
     }
 
@@ -187,9 +190,9 @@ export const usePlayerStore = defineStore(
       volume,
       lastVolume,
       seekTime,
+      isDragging,
       resumeOnGesture,
       setResumeOnGesture,
-      hasCurrentSong,
       progress,
       currentTimeFormatted,
       durationFormatted,
@@ -200,10 +203,7 @@ export const usePlayerStore = defineStore(
       setPlaying,
       playNext,
       playPrev,
-      prev,
-      next,
       seekTo,
-      setProgress,
       setVolume,
       changeMode,
       removeFromPlaylist,

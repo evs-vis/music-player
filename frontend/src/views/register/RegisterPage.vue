@@ -95,11 +95,7 @@ const handleRegister = async () => {
                 placeholder="至少 8 位字符"
                 autocomplete="new-password"
               />
-              <button
-                type="button"
-                class="toggle-visibility"
-                @click="togglePasswordVisible"
-              >
+              <button type="button" class="toggle-visibility" @click="togglePasswordVisible">
                 <van-icon :name="passwordVisible ? 'eye-o' : 'closed-eye'" />
               </button>
             </div>
@@ -108,11 +104,7 @@ const handleRegister = async () => {
           <!-- 协议勾选 -->
           <div class="agreement-row">
             <label class="checkbox-label" :class="{ checked: agreement }">
-              <input
-                v-model="agreement"
-                type="checkbox"
-                class="custom-checkbox"
-              />
+              <input v-model="agreement" type="checkbox" class="custom-checkbox" />
               <span class="check-mark" v-if="agreement">✓</span>
             </label>
             <span class="agreement-text">
@@ -173,11 +165,7 @@ const handleRegister = async () => {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(39, 174, 96, 0.2) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(39, 174, 96, 0.2) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }

@@ -1,11 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useAuthStore } from './auth'
-import {
-  deleteHistoryService,
-  getHistoryService,
-  updateHistoryService
-} from '@/api/history'
+import { deleteHistoryService, getHistoryService, updateHistoryService } from '@/api/history'
 
 export const useHistoryStore = defineStore('history', () => {
   // 1. state

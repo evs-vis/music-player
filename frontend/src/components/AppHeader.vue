@@ -24,25 +24,12 @@ const handleLogin = () => {
 <template>
   <div class="app-header">
     <div class="left">
-      <van-image
-        :src="logoUrl"
-        width="31"
-        height="31"
-        radius="30%"
-        fit="contain"
-      />
+      <van-image :src="logoUrl" width="31" height="31" radius="30%" fit="contain" />
       <h1 class="title">Music Player</h1>
     </div>
 
     <div class="right" @click="handleLogin">
-      <van-image
-        :src="avatarSrc"
-        width="31"
-        height="31"
-        round
-        fit="cover"
-        class="avatar"
-      />
+      <van-image :src="avatarSrc" width="31" height="31" round fit="cover" class="avatar" />
     </div>
   </div>
 </template>

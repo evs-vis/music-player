@@ -78,9 +78,7 @@ const togglePasswordVisible = () => {
           <!-- 辅助链接 -->
           <div class="link-row">
             <a class="link" @click.stop>忘记密码?</a>
-            <router-link to="/register" class="link primary"
-              >立即注册</router-link
-            >
+            <router-link to="/register" class="link primary">立即注册</router-link>
           </div>
 
           <!-- 登录按钮 -->

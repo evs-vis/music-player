@@ -109,15 +109,9 @@ const handleSubmit = async () => {
                 class="glass-input pr-12"
                 placeholder="至少 8 位字母+数字"
                 autocomplete="new-password"
-                :rules="[
-                  { required: true, message: '请输入8到16位字符', pattern }
-                ]"
+                :rules="[{ required: true, message: '请输入8到16位字符', pattern }]"
               />
-              <button
-                type="button"
-                class="toggle-visibility"
-                @click="togglePasswordVisible(1)"
-              >
+              <button type="button" class="toggle-visibility" @click="togglePasswordVisible(1)">
                 <van-icon :name="passwordVisible1 ? 'eye-o' : 'closed-eye'" />
               </button>
             </div>
@@ -144,11 +138,7 @@ const handleSubmit = async () => {
                   }
                 ]"
               />
-              <button
-                type="button"
-                class="toggle-visibility"
-                @click="togglePasswordVisible(2)"
-              >
+              <button type="button" class="toggle-visibility" @click="togglePasswordVisible(2)">
                 <van-icon :name="passwordVisible2 ? 'eye-o' : 'closed-eye'" />
               </button>
             </div>
@@ -195,11 +185,7 @@ const handleSubmit = async () => {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(39, 174, 96, 0.2) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(39, 174, 96, 0.2) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }

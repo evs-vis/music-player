@@ -26,10 +26,7 @@ const fetchDetail = async () => {
   try {
     const param = route.params.category
     // 获取所有歌单和歌曲
-    const [playlistsRes, songsRes] = await Promise.all([
-      getPlaylistsService(),
-      getSongsService()
-    ])
+    const [playlistsRes, songsRes] = await Promise.all([getPlaylistsService(), getSongsService()])
     const allPlaylists = playlistsRes.playlists
     const allSongs = songsRes.songs
 
@@ -47,14 +44,17 @@ const fetchDetail = async () => {
           : []
       }
     } else {
-      // 当作分类处理
+      // 当作分类处理（param 为分类 id，与歌曲 category 英文 id 匹配）
       const categorySongs = allSongs.filter((s) => s.category === param)
       // 找出所有属于该分类的歌曲的封面作为背景（取第一首的封面）
       const cover = categorySongs.length > 0 ? categorySongs[0].cover : ''
+      // 空分类时用兜底占位封面
+      const fallbackCover = allSongs[0]?.cover || ''
       playlistInfo.value = {
-        name: param,
-        cover: cover,
-        description: `${categorySongs.length} 首歌曲`,
+        name: categorySongs.length > 0 ? param : '该分类暂无歌曲',
+        cover: cover || fallbackCover,
+        description:
+          categorySongs.length > 0 ? `${categorySongs.length} 首歌曲` : '暂无歌曲，请浏览其他分类',
         songs: categorySongs
       }
     }
@@ -92,14 +92,14 @@ const playSong = (song, index) => {
   playerStore.isPlaying = true
 }
 
-// 收藏
+// 收藏（传 song.id，与后端接口一致，PlayPage 同样传 id）
 const toggleFav = async (song) => {
   if (!authStore.isLoggedIn) {
     showToast('请先登录')
     return
   }
   try {
-    await favoritesStore.toggleFavorite(song)
+    await favoritesStore.toggleFavorite(song.id)
   } catch {
     showToast({ type: 'fail', message: '操作失败' })
   }
@@ -139,16 +139,8 @@ const goBack = () => {
 
     <!-- 歌曲列表 -->
     <div class="song-list-container">
-      <van-loading
-        v-if="loading"
-        type="spinner"
-        color="#27AE60"
-        class="loading"
-      />
-      <van-empty
-        v-else-if="playlistInfo.songs.length === 0"
-        description="暂无歌曲"
-      />
+      <van-loading v-if="loading" type="spinner" color="#27AE60" class="loading" />
+      <van-empty v-else-if="playlistInfo.songs.length === 0" description="暂无歌曲" />
       <div v-else class="song-list">
         <div
           v-for="(song, index) in playlistInfo.songs"

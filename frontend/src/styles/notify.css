@@ -1,9 +1,9 @@
 :root {
   --van-toast-background: #2c3e50a3 !important;
-    /* 修改 Toast 背景色 */
-    /* 如果你也想改弹出层（Popup）背景，可以同时改： */
-    --van-popup-background: #2c3e50a3 !important;
-    /* 这会影响到所有 Popup，不仅 Toast */
+  /* 修改 Toast 背景色 */
+  /* 如果你也想改弹出层（Popup）背景，可以同时改： */
+  --van-popup-background: #2c3e50a3 !important;
+  /* 这会影响到所有 Popup，不仅 Toast */
 }
 
 .van-notify {

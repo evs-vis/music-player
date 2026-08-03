@@ -39,9 +39,9 @@ const fetchFeatured = async () => {
   }
 }
 
-// 跳转分类详情页
+// 跳转分类详情页（传英文分类 id，详情页按 id 匹配）
 const goCategory = (cat) => {
-  router.push({ name: 'PlaylistDetail', params: { category: cat.name } })
+  router.push({ name: 'PlaylistDetail', params: { category: cat.id } })
 }
 
 // 播放推荐歌单的所有歌曲
@@ -84,15 +84,10 @@ onMounted(() => {
         class="category-card glass-card"
         @click="goCategory(cat)"
       >
-        <div
-          class="icon-wrapper"
-          :style="{ backgroundColor: cat.color + '10', color: cat.color }"
-        >
+        <div class="icon-wrapper" :style="{ backgroundColor: cat.color + '10', color: cat.color }">
           <van-icon :name="cat.icon" size="32" />
         </div>
-        <span class="cat-name" :style="{ color: cat.color }">{{
-          cat.name
-        }}</span>
+        <span class="cat-name" :style="{ color: cat.color }">{{ cat.name }}</span>
       </div>
     </div>
 
@@ -101,19 +96,11 @@ onMounted(() => {
       <h3 class="section-title">为您推荐</h3>
       <div class="featured-card glass-card">
         <div class="cover-wrapper">
-          <van-image
-            :src="featuredPlaylist.cover"
-            width="80"
-            height="80"
-            radius="8"
-            fit="cover"
-          />
+          <van-image :src="featuredPlaylist.cover" width="80" height="80" radius="8" fit="cover" />
         </div>
         <div class="playlist-info">
           <h4 class="playlist-name">{{ featuredPlaylist.name }}</h4>
-          <p class="song-count">
-            {{ featuredPlaylist.songIds?.length || 0 }} 首歌曲
-          </p>
+          <p class="song-count">{{ featuredPlaylist.songIds?.length || 0 }} 首歌曲</p>
         </div>
         <button class="play-btn" @click.stop="playFeaturedPlaylist">
           <van-icon name="play" size="20" color="#fff" />

@@ -22,11 +22,7 @@ const goPlayPage = () => {
 </script>
 
 <template>
-  <div
-    v-if="playerStore.currentSong"
-    class="mini-player glass-card"
-    @click="goPlayPage"
-  >
+  <div v-if="playerStore.currentSong" class="mini-player glass-card" @click="goPlayPage">
     <van-image
       :src="playerStore.currentSong.cover"
       width="48"

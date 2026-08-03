@@ -10,7 +10,9 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     Components({
-      resolvers: [VantResolver()]
+      // importStyle: true（默认）—— 模板中 <van-*> 组件自动引入对应样式，
+      // 实现按需引入，避免全量 CSS 被打包
+      resolvers: [VantResolver({ importStyle: true })]
     })
   ],
   resolve: {

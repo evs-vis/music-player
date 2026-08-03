@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useFavoritesStore } from '@/stores'
 import { showToast } from 'vant'
@@ -47,12 +47,8 @@ const formatTime = (seconds) => {
 }
 
 // 播放模式图标映射
-const modeIcon = computed(
-  () => modeConfig[playerStore.playMode]?.icon || 'play'
-)
-const modeColor = computed(
-  () => modeConfig[playerStore.playMode]?.color || '#27ae60'
-)
+const modeIcon = computed(() => modeConfig[playerStore.playMode]?.icon || 'play')
+const modeColor = computed(() => modeConfig[playerStore.playMode]?.color || '#27ae60')
 // const modeText = computed(
 //   () => modeConfig[playerStore.playMode]?.text || '列表循环'
 // )
@@ -65,23 +61,62 @@ const isFav = computed(() => {
   return favoritesStore.favoriteSongs.some((s) => s.id === currentSong.value.id)
 })
 
-// 歌词处理
-const currentLyricIndex = computed(() => {
+// 歌词处理：增量探测（#22）
+// 歌词按 time 升序，timeupdate 每次只前进 0~1 行，从上次索引往后探测平均 O(1)，
+// 避免每次从尾部全量线性扫描；seek/切歌回退时再从 0 重新定位。
+const currentLyricIndex = ref(-1)
+function updateLyricIndex() {
   const lyrics = currentSong.value?.lyrics
-  if (!lyrics || lyrics.length === 0) return -1
-  const time = playerStore.currentTime
-  for (let i = lyrics.length - 1; i >= 0; i--) {
-    if (time >= lyrics[i].time) return i
+  if (!lyrics || lyrics.length === 0) {
+    currentLyricIndex.value = -1
+    return
   }
-  return 0
-})
+  const time = playerStore.currentTime
+  let idx = currentLyricIndex.value
+  if (idx < 0) idx = 0
+  // 常规推进：time >= 下一行时间则继续后移
+  while (idx + 1 < lyrics.length && time >= lyrics[idx + 1].time) idx++
+  // 回退（seek/切歌）：当前行时间已超过播放位置，从 0 重定位
+  while (idx > 0 && time < lyrics[idx].time) idx--
+  if (time < lyrics[0].time) idx = 0
+  currentLyricIndex.value = idx
+}
+// 播放时间变化时增量更新；切歌时重置索引
+watch(() => playerStore.currentTime, updateLyricIndex)
+watch(
+  () => playerStore.currentSong?.id,
+  () => {
+    currentLyricIndex.value = 0
+    updateLyricIndex()
+  },
+  { immediate: true }
+)
 
-// 拖动进度条
-const seek = (event) => {
+// 计算拖动位置对应的播放时间
+const seekRatio = (event) => {
   const rect = event.currentTarget.getBoundingClientRect()
   const x = event.touches ? event.touches[0].clientX : event.clientX
   const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width))
-  playerStore.seekTo(ratio * playerStore.duration)
+  return ratio * playerStore.duration
+}
+
+// 开始拖动进度条：进入拖动状态，更新预览（不真正 seek）
+const startSeek = (event) => {
+  playerStore.isDragging = true
+  playerStore.currentTime = seekRatio(event)
+}
+
+// 拖动中：只更新预览，由 isDragging 抑制 timeupdate 写回（#10）
+const dragSeek = (event) => {
+  if (!playerStore.isDragging) return
+  playerStore.currentTime = seekRatio(event)
+}
+
+// 结束拖动：退出拖动状态并真正 seek
+const endSeek = (event) => {
+  if (!playerStore.isDragging) return
+  playerStore.seekTo(seekRatio(event))
+  playerStore.isDragging = false
 }
 
 // 播放/暂停
@@ -138,9 +173,7 @@ watch(
 // ✅ 歌词索引变化时平滑滚动到当前行（居中）
 watch(currentLyricIndex, () => {
   nextTick(() => {
-    const container = showLyrics.value
-      ? lyricsFullRef.value
-      : lyricsMiniRef.value
+    const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
     if (container) scrollToLine(container)
   })
 })
@@ -148,9 +181,7 @@ watch(currentLyricIndex, () => {
 // ✅ 切换 唱片/歌词 模式后，让当前行立即居中
 watch(showLyrics, () => {
   nextTick(() => {
-    const container = showLyrics.value
-      ? lyricsFullRef.value
-      : lyricsMiniRef.value
+    const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
     if (container) scrollToLine(container)
   })
 })
@@ -231,15 +262,19 @@ onMounted(() => {
     favoritesStore.loadFavorites()
   }
 })
+
+// 卸载时取消歌词滚动动画，避免 rAF 空转并持有已卸载容器引用（#20）
+onUnmounted(() => {
+  for (const [, frameId] of scrollAnimFrames) {
+    cancelAnimationFrame(frameId)
+  }
+})
 </script>
 
 <template>
   <div class="play-page" v-if="currentSong">
     <!-- 模糊背景 -->
-    <div
-      class="bg-blur"
-      :style="{ backgroundImage: `url(${currentSong.cover})` }"
-    />
+    <div class="bg-blur" :style="{ backgroundImage: `url(${currentSong.cover})` }" />
 
     <!-- 头部导航 -->
     <header class="play-header">
@@ -259,10 +294,7 @@ onMounted(() => {
     <main class="play-main" @click="toggleLyrics">
       <!-- ✅ 唱片模式 -->
       <template v-if="!showLyrics">
-        <div
-          class="album-art-wrapper"
-          :class="{ 'is-paused': !playerStore.isPlaying }"
-        >
+        <div class="album-art-wrapper" :class="{ 'is-paused': !playerStore.isPlaying }">
           <div class="album-art">
             <van-image
               :src="currentSong.cover"
@@ -317,9 +349,11 @@ onMounted(() => {
           </div>
           <div
             class="progress-bar"
-            @mousedown="seek"
-            @touchstart="seek"
-            @touchmove="seek"
+            @mousedown="startSeek"
+            @touchstart="startSeek"
+            @touchmove="dragSeek"
+            @mouseup="endSeek"
+            @touchend="endSeek"
           >
             <div class="progress-track">
               <div class="progress-fill" :style="{ width: progress + '%' }">
@@ -337,9 +371,7 @@ onMounted(() => {
             </button>
             <button class="play-btn" @click="togglePlay">
               <van-icon
-                :name="
-                  playerStore.isPlaying ? 'pause-circle-o' : 'play-circle-o'
-                "
+                :name="playerStore.isPlaying ? 'pause-circle-o' : 'play-circle-o'"
                 size="48"
               />
             </button>
@@ -547,20 +579,8 @@ onMounted(() => {
   text-align: center;
   // 上下留出半屏空白，保证首行/末行也能滚动到正中间
   padding: 40px 0;
-  mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black 20%,
-    black 80%,
-    transparent
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black 20%,
-    black 80%,
-    transparent
-  );
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
 
   &::-webkit-scrollbar {
     display: none;

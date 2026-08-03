@@ -24,10 +24,7 @@ const favoriteIds = ref([])
 
 const fetchData = async () => {
   try {
-    const [plRes, songRes] = await Promise.all([
-      getPlaylistsService(),
-      getSongsService()
-    ])
+    const [plRes, songRes] = await Promise.all([getPlaylistsService(), getSongsService()])
     playlists.value = plRes.playlists
     hotSongs.value = songRes.songs.slice(0, 10)
   } catch {
@@ -94,10 +91,7 @@ onMounted(() => {
           class="playlist-card glass-card"
           @click="goPlaylistDetail(pl.id)"
         >
-          <div
-            class="card-bg"
-            :style="{ backgroundImage: `url(${pl.cover})` }"
-          />
+          <div class="card-bg" :style="{ backgroundImage: `url(${pl.cover})` }" />
           <div class="card-overlay" />
           <span class="card-name">{{ pl.name }}</span>
         </div>
