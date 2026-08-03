@@ -58,9 +58,6 @@ const goHistory = () => {
   // 可以跳转到一个专门的收藏列表页，这里简单处理
   showHistory.value = !showHistory.value
 }
-const showFavorites = ref(false)
-const showHistory = ref(false)
-
 // 点击播放
 const playFromPopup = (song) => {
   playerStore.setPlaylist([song], 0)
@@ -69,6 +66,8 @@ const playFromPopup = (song) => {
   showFavorites.value = false
   showHistory.value = false
 }
+const showFavorites = ref(false)
+const showHistory = ref(false)
 // 设置菜单项
 const menuItems = [
   { icon: 'envelope-o', label: '消息中心', badge: 3, action: () => {} },

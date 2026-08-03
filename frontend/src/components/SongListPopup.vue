@@ -31,9 +31,9 @@ const onPlay = (song) => emit('play', song)
     closeable
     @click-close-icon="close"
   >
-    <div class="favorites-popup">
+    <div class="popup-container">
       <h3 class="popup-title">{{ title }}</h3>
-      <div v-if="songs.length.length === 0" class="empty-state">
+      <div v-if="songs.length === 0" class="empty-state">
         <van-empty :description="emptyText" />
       </div>
       <div v-else class="song-list">
@@ -68,6 +68,8 @@ const onPlay = (song) => emit('play', song)
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .popup-title {
@@ -93,6 +95,9 @@ const onPlay = (song) => emit('play', song)
   display: flex;
   flex-direction: column;
   gap: $sm;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-bottom: $safe-margin;
 
   &::-webkit-scrollbar {
     display: none;
