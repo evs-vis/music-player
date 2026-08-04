@@ -11,74 +11,104 @@ import {
 export const useAuthStore = defineStore(
   'auth-store',
   () => {
+    // ====== State ======
     const token = ref('')
     const user = ref(null)
 
+    // ====== Getters ======
     const isLoggedIn = computed(() => !!token.value)
 
+    // ====== Actions ======
+
+    // 注册
     async function register(username, password) {
       return await userRegisterService(username, password)
     }
 
+    // 修改密码
     async function changePwd(data) {
       return await userChangePwdService(data)
     }
+
+    // 登录（核心逻辑）
     async function login(username, password) {
-      const data = await userLoginService(username, password)
-      // login 接口返回 { message, token, user: { id, username, avatar } }
-      token.value = data.token || ''
-      const u = data.user || {}
-      user.value = {
-        id: u.id,
-        username: u.username,
-        avatar: u.avatar || null
+      // 1. 参数校验（防御性）
+      if (!username?.trim() || !password) {
+        const err = new Error('账号或密码不能为空')
+        err.code = 'VALIDATION_ERROR'
+        throw err
       }
 
-      // 登录后尝试从 localStorage 加载该账号的播放器状态（按 userId 区分）
       try {
-        const player = usePlayerStore()
-        const uid = user.value?.id
-        const key = uid ? `playerState_user_${uid}` : 'playerState_guest'
-        const raw = localStorage.getItem(key)
-        if (raw) {
-          const playerState = JSON.parse(raw)
-          player.playlist = Array.isArray(playerState.playlist) ? [...playerState.playlist] : []
-          player.currentIndex = Number.isFinite(playerState.currentIndex)
-            ? playerState.currentIndex
-            : -1
-          player.currentSong = player.playlist[player.currentIndex]
-            ? { ...player.playlist[player.currentIndex] }
-            : null
-          const restoredTime =
-            typeof playerState.currentTime === 'number' ? playerState.currentTime : 0
-          player.currentTime = restoredTime
-          // 恢复进度到上次播放位置（#18）：设置 seekTime 由 App.vue 的 watch 触发真正 seek
-          if (restoredTime > 0) {
-            player.seekTime = restoredTime
-          }
-          // 如果之前是正在播放状态，浏览器可能阻止自动播放，
-          // 所以标记为等待用户交互恢复播放并保持 isPlaying 为 false
-          if (playerState.isPlaying) {
-            player.setPlaying(false)
-            if (player.setResumeOnGesture) player.setResumeOnGesture(true)
-          } else {
-            player.isPlaying = !!playerState.isPlaying
-          }
-        }
-      } catch {
-        // ignore parse/error
-      }
+        // 2. 调用登录 API
+        const res = await userLoginService(username, password)
 
-      return data
+        // 3. 保存登录态
+        token.value = res.token || ''
+        const u = res.user || {}
+        user.value = {
+          id: u.id,
+          username: u.username,
+          avatar: u.avatar || null
+        }
+
+        // 4. 登录成功后恢复播放器状态
+        try {
+          const player = usePlayerStore()
+          const uid = user.value?.id
+          const key = uid ? `playerState_user_${uid}` : 'playerState_guest'
+          const raw = localStorage.getItem(key)
+
+          if (raw) {
+            const playerState = JSON.parse(raw)
+            player.playlist = Array.isArray(playerState.playlist) ? [...playerState.playlist] : []
+            player.currentIndex = Number.isFinite(playerState.currentIndex)
+              ? playerState.currentIndex
+              : -1
+            player.currentSong = player.playlist[player.currentIndex]
+              ? { ...player.playlist[player.currentIndex] }
+              : null
+
+            const restoredTime =
+              typeof playerState.currentTime === 'number' ? playerState.currentTime : 0
+            player.currentTime = restoredTime
+
+            if (restoredTime > 0) {
+              player.seekTime = restoredTime
+            }
+
+            if (playerState.isPlaying) {
+              player.setPlaying(false)
+              if (player.setResumeOnGesture) player.setResumeOnGesture(true)
+            } else {
+              player.isPlaying = !!playerState.isPlaying
+            }
+          }
+        } catch {
+          // 播放器恢复失败不影响登录流程
+        }
+
+        // 5. 返回登录结果
+        return res
+      } catch (err) {
+        // 6. 错误标准化
+        const msg = err?.response?.data?.error || err?.message || '网络异常'
+        const stdErr = new Error(msg)
+        stdErr.code = 'HTTP_ERROR'
+        throw stdErr
+      }
     }
 
+    // 更新头像
     function updateAvatar(url) {
       if (user.value) {
         user.value.avatar = url
       }
     }
+
+    // 登出
     function logout() {
-      // 登出前将当前播放状态保存到 localStorage（按 userId）
+      // 1. 保存当前播放状态到 localStorage
       try {
         const player = usePlayerStore()
         const uid = user.value?.id
@@ -94,9 +124,11 @@ export const useAuthStore = defineStore(
         // ignore
       }
 
+      // 2. 清空登录态
       token.value = ''
       user.value = null
-      // 退出账号时清理播放状态，避免播放与账号无关
+
+      // 3. 清空播放器
       try {
         const player = usePlayerStore()
         player.setPlaying(false)
@@ -106,13 +138,11 @@ export const useAuthStore = defineStore(
       }
     }
 
-    // 注销账号（#39）：删除后端用户及关联数据后清理本地登录态
+    // 注销账号
     async function deleteAccount() {
-      // 先取 uid，logout 会清空 user
       const uid = user.value?.id
       await deleteAccountService()
       logout()
-      // 清理该账号在 localStorage 的播放状态
       try {
         if (uid) localStorage.removeItem(`playerState_user_${uid}`)
       } catch {
@@ -132,6 +162,7 @@ export const useAuthStore = defineStore(
       updateAvatar
     }
   },
+  // 持久化配置
   {
     persist: { paths: ['token', 'user'] }
   }

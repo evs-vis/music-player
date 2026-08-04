@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { showToast } from 'vant'
@@ -12,25 +12,32 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const passwordVisible = ref(false)
+// 定时器清理
+let redirectTimer = null
 
-// 登录
-const toastShown = ref(false)
 const handleLogin = async () => {
+  //防止重复点击
+  if (loading.value) return
   loading.value = true
   try {
     await authStore.login(username.value.trim(), password.value)
-    toastShown.value = true
+
     showToast({ type: 'success', message: '登录成功', duration: 300 })
-    setTimeout(() => {
+    redirectTimer = setTimeout(() => {
       router.replace('/home')
-    }, 500)
-  } catch (error) {
-    const msg = error?.response?.data?.error || '登录失败，请重试'
-    showToast({ type: 'fail', message: msg, position: 'middle' })
+    }, 1000)
+  } catch (err) {
+    showToast({ type: 'fail', message: err.message, position: 'middle' })
   } finally {
     loading.value = false
   }
 }
+onUnmounted(() => {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+    redirectTimer = null
+  }
+})
 
 // 切换密码可见性
 const togglePasswordVisible = () => {
@@ -61,6 +68,7 @@ const togglePasswordVisible = () => {
             placeholder="输入用户名"
             left-icon="user-o"
             :rules="[{ required: true, message: '请输入用户名' }]"
+            :disabled="loading"
           />
           <!-- 密码 -->
           <van-field
@@ -73,6 +81,7 @@ const togglePasswordVisible = () => {
             :right-icon="passwordVisible ? 'eye-o' : 'closed-eye'"
             @click-right-icon="togglePasswordVisible"
             :rules="[{ required: true, message: '请输入密码' }]"
+            :disabled="loading"
           />
 
           <!-- 辅助链接 -->
