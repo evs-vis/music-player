@@ -22,7 +22,20 @@ export const useAuthStore = defineStore(
 
     // 注册
     async function register(username, password) {
-      return await userRegisterService(username, password)
+      if (!username?.trim() || !password) {
+        const err = new Error('账号或密码不能为空')
+        err.code = 'VALIDATION_ERROR'
+        throw err
+      }
+      try {
+        const res = await userRegisterService(username, password)
+        return res
+      } catch (err) {
+        const msg = err?.response?.data?.error || err?.message || '网络异常'
+        const stdErr = new Error(msg)
+        stdErr.code = 'HTTP_ERROR'
+        throw stdErr
+      }
     }
 
     // 修改密码

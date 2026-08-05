@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { showToast } from 'vant'
@@ -13,6 +13,7 @@ const agreement = ref(false)
 const loading = ref(false)
 const passwordVisible = ref(false)
 
+let redirectTimer = null
 const togglePasswordVisible = () => {
   passwordVisible.value = !passwordVisible.value
 }
@@ -22,6 +23,8 @@ const handleRegister = async () => {
     showToast({ type: 'warning', message: '请阅读并同意用户协议与隐私政策' })
     return
   }
+  //防止重复点击
+  if (loading.value) return
   loading.value = true
   try {
     await authStore.register(username.value.trim(), password.value)
@@ -30,16 +33,20 @@ const handleRegister = async () => {
       message: '注册成功，即将跳转登录',
       duration: 1000
     })
-    setTimeout(() => {
+    redirectTimer = setTimeout(() => {
       router.replace('/login')
     }, 1500)
-  } catch (error) {
-    const msg = error?.response?.data?.error || '注册失败，请重试'
-    showToast({ type: 'fail', message: msg })
+  } catch (err) {
+    showToast({ type: 'fail', message: err.msg, position: 'middle' })
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  clearTimeout(redirectTimer)
+  redirectTimer = null
+})
 </script>
 
 <template>
@@ -71,13 +78,14 @@ const handleRegister = async () => {
             <label class="field-label" for="username">用户名</label>
             <div class="input-wrapper">
               <van-icon name="user-o" class="input-icon" />
-              <input
+              <van-field
                 id="username"
                 v-model="username"
                 type="text"
                 class="glass-input"
                 placeholder="输入您的用户名"
                 autocomplete="username"
+                :disabled="loading"
               />
             </div>
           </div>
@@ -87,13 +95,14 @@ const handleRegister = async () => {
             <label class="field-label" for="password">密码</label>
             <div class="input-wrapper">
               <van-icon name="lock" class="input-icon" />
-              <input
+              <van-field
                 id="password"
                 v-model="password"
                 :type="passwordVisible ? 'text' : 'password'"
                 class="glass-input pr-12"
                 placeholder="至少 8 位字符"
                 autocomplete="new-password"
+                :disabled="loading"
               />
               <button type="button" class="toggle-visibility" @click="togglePasswordVisible">
                 <van-icon :name="passwordVisible ? 'eye-o' : 'closed-eye'" />
@@ -160,7 +169,24 @@ const handleRegister = async () => {
   overflow-x: hidden;
   padding: $md $xl;
 }
-
+:deep(.van-field) {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  min-height: auto;
+  .van-field__control {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+  .van-field__left-icon,
+  .van-field__right-icon {
+    display: none;
+  }
+}
 // 粒子装饰
 .particle {
   position: absolute;
