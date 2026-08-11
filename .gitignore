@@ -1,0 +1,34 @@
+# 依赖与构建产物
+**/node_modules
+**/dist
+**/dist-ssr
+**/coverage
+frontend/.eslintcache
+
+# 日志
+*.log
+
+# 环境变量（含 JWT 密钥等敏感配置）
+.env
+.env.*
+!.env.example
+
+# 后端运行数据（含用户密码哈希、上传头像等隐私数据）
+backend/data/
+backend/public/avatars/
+# 音频/封面内容文件（体积大，不入库；由部署时单独准备）
+backend/public/audio/
+backend/public/covers/
+
+# Claude Code 本地配置（个人偏好，不入库）
+.claude/
+
+# git 迁移临时目录（保留本地回溯能力，不入库）
+frontend-git-backup/
+frontend-history/
+
+# 编辑器/系统
+.DS_Store
+
+# Windows 命令重定向残留文件
+nul
