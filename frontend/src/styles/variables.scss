@@ -13,8 +13,11 @@ $tabbar-height: 50px;
 // 迷你播放器高度
 $mini-player-height: 56px;
 
+// iOS 底部安全区：只用 env()（Chrome/headless 下 constant() 会返回异常负值，
+// 导致 max() 取到负安全区，把 fixed 元素推出视口）；带 0px fallback 兼容无刘海屏
+$safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+
 // 主题色
-// $primary-color: #27AE60;
 $primary-light: #d5f1e4;
 $text-primary: #2c3e50;
 $text-secondary: #7f8c8d;

@@ -2,10 +2,11 @@
 import { watch } from 'vue'
 import { usePlayerStore, useAuthStore } from '@/stores'
 import { useAudio } from '@/composables/useAudio'
+import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { showToast } from 'vant'
 
 const playerStore = usePlayerStore()
-const { loadAndPlay, pause, play, seek, setVolume } = useAudio()
+const { loadAndPlay, pause, play, seek, setVolume, retryPlayback } = useAudio()
 let lastPlaybackKey = ''
 let saveTimer = null
 const authStore = useAuthStore()
@@ -55,19 +56,18 @@ watch(
   { immediate: true }
 )
 
-// 保存播放器状态到后端（节流，2s）
+// 保存播放器状态到 localStorage（节流，2s）
+// 拆成两个 watch：playlist 可能 push/splice 而不改 currentIndex（addToPlaylist），
+// 需保留 deep 监听；高频 currentTime（约 4 次/秒）走浅监听，避免每次更新深遍历整个 playlist 对象树
+const scheduleSave = () => {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(saveToLocal, 2000)
+}
+
+watch(() => playerStore.playlist, scheduleSave, { deep: true })
 watch(
-  () => [
-    playerStore.playlist,
-    playerStore.currentIndex,
-    playerStore.currentTime,
-    playerStore.isPlaying
-  ],
-  () => {
-    if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(saveToLocal, 2000)
-  },
-  { deep: true }
+  () => [playerStore.currentIndex, playerStore.currentTime, playerStore.isPlaying],
+  scheduleSave
 )
 
 watch(
@@ -122,10 +122,22 @@ watch(
     document.addEventListener('click', handler, { once: true })
   }
 )
+
+// 播放页点击"重试"：由 store 标记触发，重新加载当前歌曲；失败标记复位交给 audio 事件
+watch(
+  () => playerStore.retryRequested,
+  async (val) => {
+    if (!val) return
+    playerStore.clearRetryRequest()
+    await retryPlayback()
+  }
+)
 </script>
 
 <template>
   <div id="app">
-    <router-view />
+    <ErrorBoundary>
+      <router-view />
+    </ErrorBoundary>
   </div>
 </template>

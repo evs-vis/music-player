@@ -1,35 +1,50 @@
 <script setup>
-import logoUrl from '@/assets/logo.png'
+import logoUrl from '@/assets/logo.svg'
 import avatarUrl from '@/assets/avatar.jpg'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 const router = useRouter()
 const authStore = useAuthStore()
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const baseURL = import.meta.env.VITE_API_BASE_URL || ''
 const avatarSrc = computed(() => {
   const custom = authStore.user?.avatar
   if (custom) return baseURL + custom
   return avatarUrl
 })
 const handleLogin = () => {
+  // 未登录先跳登录页并 return，避免紧接着 push /mine 造成跳转竞态
   if (!authStore.isLoggedIn) {
     router.push('/login')
+    return
   }
   router.push('/mine')
-
-  // console.log('handleLogin')
 }
 </script>
 <template>
   <div class="app-header">
     <div class="left">
-      <van-image :src="logoUrl" width="31" height="31" radius="30%" fit="contain" />
+      <van-image
+        :src="logoUrl"
+        width="31"
+        height="31"
+        radius="30%"
+        fit="contain"
+        alt="Music Player 标志"
+      />
       <h1 class="title">Music Player</h1>
     </div>
 
     <div class="right" @click="handleLogin">
-      <van-image :src="avatarSrc" width="31" height="31" round fit="cover" class="avatar" />
+      <van-image
+        :src="avatarSrc"
+        width="31"
+        height="31"
+        round
+        fit="cover"
+        class="avatar"
+        alt="用户头像"
+      />
     </div>
   </div>
 </template>

@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores'
 import { useRouter } from 'vue-router'
-defineEmits(['click', 'showPlaylist'])
+import PlaylistSheet from './PlaylistSheet.vue'
 const playerStore = usePlayerStore()
 const router = useRouter()
+// 播放列表弹层（组件内部管理，不向父组件抛事件）
 const showPlaylist = ref(false)
 const progressPercent = computed(() => {
   if (!playerStore.duration) return 0
@@ -13,12 +14,10 @@ const progressPercent = computed(() => {
 
 const playIcon = computed(() => (playerStore.isPlaying ? 'pause' : 'play'))
 
+// 点击迷你播放器跳转播放页（子按钮用 @click.stop 阻断冒泡）
 const goPlayPage = () => {
   router.push('/play')
 }
-
-// 通过 useAudio 驱动的进度会由 playerStore 更新，这里只需要同步即可
-// 迷你播放器不直接控制音频，仅展示
 </script>
 
 <template>
@@ -30,9 +29,13 @@ const goPlayPage = () => {
       radius="8"
       fit="cover"
       class="cover"
+      :alt="'封面：' + playerStore.currentSong.title"
     />
     <div class="info">
-      <div class="title">{{ playerStore.currentSong.title }}</div>
+      <div class="title">
+        {{ playerStore.currentSong.title }}
+        <van-loading v-if="playerStore.isBuffering" size="14" class="title-loading" @click.stop />
+      </div>
       <div class="artist">{{ playerStore.currentSong.artist }}</div>
     </div>
     <div class="controls">
@@ -61,7 +64,7 @@ const goPlayPage = () => {
 <style lang="scss" scoped>
 .mini-player {
   position: fixed;
-  bottom: calc($tabbar-height + $sm);
+  bottom: calc($tabbar-height + $sm + $safe-area-inset-bottom);
   left: $safe-margin;
   right: $safe-margin;
   z-index: 50;
@@ -92,6 +95,13 @@ const goPlayPage = () => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .title-loading {
+      flex-shrink: 0;
+    }
   }
 
   .artist {

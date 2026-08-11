@@ -16,12 +16,12 @@ export const userRegisterService = (username, password) => {
   })
 }
 
-//用户修改密码（#36：请求体平铺，不再包 { data }）
+//用户修改密码
 export const userChangePwdService = (data) => {
   return request.put('/api/user/password', data)
 }
 
-// 注销账号（#39）
+// 注销账号
 export const deleteAccountService = () => {
   return request.delete('/api/user')
 }

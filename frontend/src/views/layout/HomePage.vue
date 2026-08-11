@@ -1,35 +1,45 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useHistoryStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
 import { showToast } from 'vant'
-import MiniPlayer from '@/components/MiniPlayer.vue'
-import PlaylistSheet from '@/components/PlaylistSheet.vue'
+// 迷你播放器按需异步加载，避免挤占首屏同步 JS
+const MiniPlayer = defineAsyncComponent(() => import('@/components/MiniPlayer.vue'))
 
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
 const historyStore = useHistoryStore()
-// ✅ 播放列表弹层
-const showPlaylist = ref(false)
-
-// ✅ 是否显示迷你播放器
+// ✅ 是否显示迷你播放器（有当前歌曲即显示）
 const showMiniPlayer = computed(() => playerStore.currentSong !== null)
 
 const playlists = ref([])
 const hotSongs = ref([])
 const favoriteIds = ref([])
+const loading = ref(true)
 
 const fetchData = async () => {
-  try {
-    const [plRes, songRes] = await Promise.all([getPlaylistsService(), getSongsService()])
-    playlists.value = plRes.playlists
-    hotSongs.value = songRes.songs.slice(0, 10)
-  } catch {
-    showToast({ type: 'fail', message: '数据加载失败' })
-  }
+  // 歌单与歌曲两个接口并行、失败互相隔离：一个失败不拖累另一个，部分数据也能展示
+  const tasks = [
+    getPlaylistsService()
+      .then((res) => {
+        playlists.value = res.playlists || []
+      })
+      .catch(() => {
+        showToast({ type: 'fail', message: '歌单加载失败' })
+      }),
+    getSongsService()
+      .then((res) => {
+        hotSongs.value = (res.songs || []).slice(0, 10)
+      })
+      .catch(() => {
+        showToast({ type: 'fail', message: '歌曲加载失败' })
+      })
+  ]
+  await Promise.all(tasks)
+  loading.value = false
 }
 
 const goPlaylistDetail = (id) => {
@@ -82,9 +92,14 @@ onMounted(() => {
     <app-header></app-header>
 
     <!-- 推荐歌单 -->
-    <section class="section">
+    <!-- 加载期间只显示卡片骨架（v-if="!loading" 连标题一起隐藏），数据就绪后标题与内容同帧渲染 -->
+    <section v-if="!loading" class="section">
       <h2 class="section-title">推荐歌单</h2>
       <div class="scroll-container no-scrollbar">
+        <!-- 歌单卡骨架占位：数据未到时撑住 176x224 卡片高度，避免渲染时布局偏移 -->
+        <template v-if="loading">
+          <div v-for="i in 3" :key="'skc' + i" class="playlist-card playlist-skeleton"></div>
+        </template>
         <div
           v-for="pl in playlists"
           :key="pl.id"
@@ -99,12 +114,22 @@ onMounted(() => {
     </section>
 
     <!-- 热门歌曲 -->
-    <section class="section">
+    <section v-if="!loading" class="section">
       <div class="section-header">
         <h2 class="section-title">热门歌曲</h2>
         <span class="more-btn" @click="router.push('/search')">查看更多</span>
       </div>
       <div class="song-list">
+        <!-- 数据未到前的骨架行：与真实行同高，避免数据到达撑开列表产生布局偏移（CLS） -->
+        <template v-if="loading">
+          <div v-for="i in 6" :key="'sk' + i" class="song-item song-skeleton">
+            <div class="skeleton-cover"></div>
+            <div class="skeleton-lines">
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line short"></div>
+            </div>
+          </div>
+        </template>
         <div
           v-for="(song, idx) in hotSongs"
           :key="song.id"
@@ -112,18 +137,25 @@ onMounted(() => {
           @click="playSong(song, idx)"
         >
           <van-image
-            :src="song.cover"
+            :src="song.coverThumb || song.cover"
             width="56"
             height="56"
             radius="8"
             fit="cover"
             class="song-cover"
+            :loading="idx < 3 ? 'eager' : 'lazy'"
+            :fetchpriority="idx < 3 ? 'high' : 'auto'"
+            :alt="'封面：' + song.title"
           />
           <div class="song-info">
             <div class="song-title">{{ song.title }}</div>
             <div class="song-artist">{{ song.artist }}</div>
           </div>
-          <button class="fav-btn" @click.stop="toggleFav(song)">
+          <button
+            class="fav-btn"
+            @click.stop="toggleFav(song)"
+            :aria-label="isFav(song.id) ? '取消收藏' : '收藏'"
+          >
             <van-icon
               :name="isFav(song.id) ? 'like' : 'like-o'"
               :color="isFav(song.id) ? '#E74C3C' : '#BCCABC'"
@@ -134,15 +166,8 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ✅ 迷你播放器 -->
-    <MiniPlayer
-      v-if="showMiniPlayer"
-      @click="router.push('/play')"
-      @show-playlist="showPlaylist = true"
-    />
-
-    <!-- ✅ 播放列表弹层 -->
-    <PlaylistSheet v-model:show="showPlaylist" />
+    <!-- ✅ 迷你播放器（内部自带播放列表弹层，点击整卡由组件内部跳转播放页） -->
+    <MiniPlayer v-if="showMiniPlayer" />
   </div>
 </template>
 
@@ -212,6 +237,11 @@ onMounted(() => {
   background-position: center;
 }
 
+/* 歌单卡骨架占位：撑住 176x224 高度，数据到达时原位替换，避免 CLS */
+.playlist-skeleton {
+  background: linear-gradient(145deg, rgba(39, 174, 96, 0.14), rgba(39, 174, 96, 0.05));
+}
+
 .card-overlay {
   position: absolute;
   inset: 0;
@@ -254,6 +284,41 @@ onMounted(() => {
 
 .song-cover {
   flex-shrink: 0;
+}
+
+/* 热门歌曲骨架行：与真实行同高（72px = 图片56 + padding上下各8），防止数据到达时撑开列表（CLS） */
+.song-skeleton {
+  min-height: 72px;
+  pointer-events: none;
+}
+
+.skeleton-cover {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: rgba(39, 174, 96, 0.12);
+}
+
+.skeleton-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.skeleton-line {
+  height: 14px;
+  width: 60%;
+  border-radius: 4px;
+  background: rgba(39, 174, 96, 0.12);
+
+  &.short {
+    width: 40%;
+    height: 12px;
+  }
 }
 
 .song-info {

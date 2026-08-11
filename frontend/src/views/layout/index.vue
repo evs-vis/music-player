@@ -1,37 +1,29 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-// const router = useRouter()
 const route = useRoute()
-const active = ref(0)
+// 是否显示底部导航栏：除歌单详情/播放/登录等二级页外均显示
+const showTabbar = computed(() => route.meta.showTabbar !== false)
 
-// 是否显示底部导航栏
-const showTabbar = computed(() => {
-  return route.meta.showTabbar !== false
-})
-
-// // 是否显示迷你播放器（除播放页外都显示）
-// const showMiniPlayer = computed(() => {
-//   return route.name !== 'Play'
-// })
-
-const onTabChange = () => {
-  // Vant Tabbar route 模式会自动处理路由跳转
-}
+// Tab 切换时滚动回顶部：tab 页均为独立路由组件（无 keep-alive），
+// 切换后新页面从顶部开始浏览，符合移动端 Tab 应用惯例
+watch(
+  () => route.path,
+  () => {
+    window.scrollTo(0, 0)
+  }
+)
 </script>
 
 <template>
   <div class="layout">
-    <div class="content">
+    <main class="content">
       <router-view />
-    </div>
+    </main>
 
-    <!-- 迷你播放器占位（后续实现） -->
-    <!-- <MiniPlayer v-if="showMiniPlayer" /> -->
-
-    <!-- 底部导航栏 -->
-    <van-tabbar v-if="showTabbar" v-model="active" @change="onTabChange" route>
+    <!-- 底部导航栏：route 模式自动按当前路由高亮并跳转，无需手动管理 active -->
+    <van-tabbar v-if="showTabbar" route safe-area-inset-bottom>
       <van-tabbar-item to="/home" icon="home-o">首页</van-tabbar-item>
       <van-tabbar-item to="/category" icon="apps-o">歌单</van-tabbar-item>
       <van-tabbar-item to="/search" icon="search">搜索</van-tabbar-item>
@@ -50,6 +42,6 @@ const onTabChange = () => {
 
 .content {
   flex: 1;
-  padding-bottom: calc($tabbar-height + $mini-player-height + 8px);
+  padding-bottom: calc($tabbar-height + $mini-player-height + 8px + $safe-area-inset-bottom);
 }
 </style>

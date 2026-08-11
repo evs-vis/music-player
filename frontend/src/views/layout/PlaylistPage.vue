@@ -96,7 +96,14 @@ onMounted(() => {
       <h3 class="section-title">为您推荐</h3>
       <div class="featured-card glass-card">
         <div class="cover-wrapper">
-          <van-image :src="featuredPlaylist.cover" width="80" height="80" radius="8" fit="cover" />
+          <van-image
+            :src="featuredPlaylist.cover"
+            width="80"
+            height="80"
+            radius="8"
+            fit="cover"
+            :alt="'封面：' + featuredPlaylist.name"
+          />
         </div>
         <div class="playlist-info">
           <h4 class="playlist-name">{{ featuredPlaylist.name }}</h4>

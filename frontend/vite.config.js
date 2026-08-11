@@ -34,5 +34,35 @@ export default defineConfig({
       '/covers': 'http://localhost:3000', // 新增封面图代理
       '/audio': 'http://localhost:3000' // 新增音频文件代理
     }
+  },
+  // preview 也走同样的代理：让 Lighthouse 能测到真实构建产物 + 真实数据流
+  preview: {
+    proxy: {
+      '/api': 'http://localhost:3000',
+      '/covers': 'http://localhost:3000',
+      '/audio': 'http://localhost:3000'
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // 拆出独立 vendor chunk：Vue 生态与 Vant 单独成包，便于浏览器缓存与首屏并行加载
+        // 注意：Rolldown 的 manualChunks 只接受函数形式（不支持 Rollup 的对象形式）
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vant')) return 'vant'
+            if (
+              id.includes('vue-router') ||
+              id.includes('pinia') ||
+              id.includes('@vue') ||
+              id.includes('/vue/')
+            ) {
+              return 'vue-vendor'
+            }
+            if (id.includes('axios')) return 'axios'
+          }
+        }
+      }
+    }
   }
 })

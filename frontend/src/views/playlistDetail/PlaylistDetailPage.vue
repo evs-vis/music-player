@@ -155,6 +155,7 @@ const goBack = () => {
             radius="8"
             fit="cover"
             class="song-cover"
+            :alt="'封面：' + song.title"
           />
           <div class="song-info">
             <div class="song-title">{{ song.title }}</div>

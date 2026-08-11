@@ -4,11 +4,11 @@ import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useSearchHistoryStore } from '@/stores'
 import { showToast } from 'vant'
 import { getSongsService } from '@/api/playlist'
+import { useDebounceFn } from '@vueuse/core'
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
 const searchHistoryStore = useSearchHistoryStore()
-// const favoritesStore = useFavoritesStore()
 
 const searchText = ref('')
 const searchResults = ref([])
@@ -18,10 +18,7 @@ onMounted(() => {
     searchHistoryStore.loadHistory()
   }
 })
-// 卸载时清理防抖定时器，避免切页后仍发出一次搜索请求（#21）
-onUnmounted(() => {
-  clearTimeout(timer)
-})
+
 // 模拟搜索热榜
 const hotList = ref([
   { rank: 1, title: '晴天', artist: '周杰伦', album: '叶惠美', hot: true },
@@ -31,62 +28,49 @@ const hotList = ref([
   { rank: 5, title: '向云端', artist: '小霞 / 海洋Bo', album: '' }
 ])
 
-// 推荐分类
+// 推荐分类（id 与歌曲 category 字段一致，详情页按英文 id 匹配）
 const categories = ref([
   {
-    name: '流行流行',
+    id: 'pop',
+    name: '流行',
     gradient: 'linear-gradient(135deg, #27AE60, #006d37)',
     icon: 'music-o'
   },
   {
-    name: '摇滚专区',
+    id: 'rock',
+    name: '摇滚',
     gradient: 'linear-gradient(135deg, #f26d83, #a7344c)',
     icon: 'fire-o'
   },
   {
-    name: '民谣之声',
+    id: 'classical',
+    name: '古典',
     gradient: 'linear-gradient(135deg, #96f7b0, #006d38)',
-    icon: 'flower-o'
+    icon: 'piano-o'
   },
   {
-    name: '古典雅韵',
+    id: 'jazz',
+    name: '爵士',
     gradient: 'linear-gradient(135deg, #ffb2bb, #871b35)',
-    icon: 'piano-o'
+    icon: 'flower-o'
   }
 ])
 
-// 防抖搜索（调用后端接口）
-let timer = null
-watch(searchText, (val) => {
-  clearTimeout(timer)
-  if (!val.trim()) {
+// ---------- 核心搜索函数 ----------
+const performSearch = async (keyword) => {
+  const trimmed = keyword.trim()
+  if (!trimmed) {
     searchResults.value = []
     return
   }
-  timer = setTimeout(async () => {
-    loading.value = true
-    try {
-      const res = await getSongsService({ q: val.trim() })
-      // console.log(res)
-      searchResults.value = res.songs
-    } catch {
-      showToast({ type: 'fail', message: '搜索失败' })
-    } finally {
-      loading.value = false
-    }
-  }, 300)
-})
 
-// 执行搜索（点击标签或输入回车）
-const doSearch = async (keyword) => {
-  searchText.value = keyword
   loading.value = true
   try {
-    const res = await getSongsService({ q: keyword.trim() })
+    const res = await getSongsService({ q: trimmed })
     searchResults.value = res.songs
+    // 登录用户记录搜索历史
     if (authStore.isLoggedIn) {
-      searchHistoryStore.addHistory(keyword)
-      // console.log('添加搜索历史：', keyword)
+      searchHistoryStore.addHistory(trimmed)
     }
   } catch {
     showToast({ type: 'fail', message: '搜索失败' })
@@ -95,7 +79,46 @@ const doSearch = async (keyword) => {
     loading.value = false
   }
 }
+// 防抖搜索（输入框）：使用 VueUse 的 useDebounceFn，提供 cancel 方法，卸载时取消待执行任务
+const debouncedSearch = useDebounceFn((val) => {
+  performSearch(val)
+}, 300)
 
+// 手动触发标志，用于阻止 watch 重复触发防抖
+let isManualTrigger = false
+
+// 监听输入变化
+watch(searchText, (val) => {
+  // 如果是手动触发的搜索（点击标签/回车），则跳过本次 watch
+  if (isManualTrigger) {
+    isManualTrigger = false // 重置标志，恢复后续正常防抖
+    return
+  }
+
+  // 空值处理
+  if (!val.trim()) {
+    searchResults.value = []
+    return
+  }
+
+  // 触发防抖搜索
+  debouncedSearch(val)
+})
+
+// 手动搜索（标签点击或回车）：取消待执行防抖后立即搜索
+const doSearch = async (keyword) => {
+  // 取消正在等待的防抖任务，避免重复
+  debouncedSearch.cancel()
+
+  // 设置标志，告诉 watch 本次变化是手动触发的，不要防抖
+  isManualTrigger = true
+
+  // 更新输入框内容（会触发 watch，但被标志拦截）
+  searchText.value = keyword
+
+  // 立即执行搜索（不防抖）
+  await performSearch(keyword)
+}
 const clearHistorySearches = async () => {
   loading.value = true
   try {
@@ -115,7 +138,7 @@ const addToPlaylist = (song) => {
   playerStore.addToPlaylist(song)
   showToast('已添加到播放列表')
 }
-// 播放热榜中的歌曲（需根据标题查歌，实际应改为通过ID）
+// 播放热榜中的歌曲：按标题精确搜索后取第一首播放
 const playHotItem = async (item) => {
   try {
     const res = await getSongsService({ q: item.title })
@@ -130,10 +153,15 @@ const playHotItem = async (item) => {
   }
 }
 
-// 跳转分类详情（模拟按 category 过滤）
-const goCategory = (catName) => {
-  router.push({ name: 'PlaylistDetail', params: { category: catName } })
+// 跳转分类详情（传英文分类 id，详情页按 category 字段匹配）
+const goCategory = (cat) => {
+  router.push({ name: 'PlaylistDetail', params: { category: cat.id } })
 }
+
+// 卸载时取消待执行的防抖任务，避免切页后仍发无意义请求
+onUnmounted(() => {
+  debouncedSearch.cancel()
+})
 </script>
 
 <template>
@@ -170,7 +198,14 @@ const goCategory = (catName) => {
           <button class="add-btn" @click.stop="addToPlaylist(song)">
             <van-icon name="add-o" size="20" color="#27ae60" />
           </button>
-          <van-image :src="song.cover" width="48" height="48" radius="8" fit="cover" />
+          <van-image
+            :src="song.cover"
+            width="48"
+            height="48"
+            radius="8"
+            fit="cover"
+            :alt="'封面：' + song.title"
+          />
           <div class="song-info">
             <div class="song-title">{{ song.title }}</div>
             <div class="song-artist">{{ song.artist }}</div>
@@ -227,10 +262,10 @@ const goCategory = (catName) => {
         <div class="category-grid">
           <div
             v-for="cat in categories"
-            :key="cat.name"
+            :key="cat.id"
             class="category-card"
             :style="{ background: cat.gradient }"
-            @click="goCategory(cat.name)"
+            @click="goCategory(cat)"
           >
             <van-icon :name="cat.icon" size="36" class="cat-icon" />
             <span class="cat-name">{{ cat.name }}</span>

@@ -101,7 +101,7 @@ const menuItems = [
 const avatarSrc = computed(() => {
   const customAvatar = authStore.user?.avatar
   if (customAvatar) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+    const baseURL = import.meta.env.VITE_API_BASE_URL || ''
     return baseURL + customAvatar
   }
   return defaultAvatar
@@ -130,9 +130,10 @@ const handleFileChange = async (event) => {
     showToast({ message: '头像更新成功', icon: 'success' })
   } catch (error) {
     console.error(error)
+    const msg = error?.response?.data?.error || '上传失败，请重试'
     showNotify({
       type: 'danger',
-      message: '上传失败，请重试|}'
+      message: msg
     })
   } finally {
     // 清除 input 值，以便重复上传同一文件
@@ -165,6 +166,7 @@ onMounted(() => {
           round
           fit="cover"
           class="default-avatar"
+          alt="默认头像"
         />
         <p class="login-text">登录后享受个性化推荐</p>
         <van-button round type="primary" block @click="goLogin" class="login-btn">
@@ -179,7 +181,15 @@ onMounted(() => {
       <section class="profile-section">
         <div class="profile-card glass-card" @click="updatePic">
           <div class="avatar-wrapper">
-            <van-image :src="avatarSrc" width="72" height="72" round fit="cover" class="avatar" />
+            <van-image
+              :src="avatarSrc"
+              width="72"
+              height="72"
+              round
+              fit="cover"
+              class="avatar"
+              alt="我的头像"
+            />
             <div class="edit-badge">
               <van-icon name="edit" size="14" color="#fff" />
             </div>
@@ -228,7 +238,14 @@ onMounted(() => {
             @click="playSong(song)"
           >
             <div class="recent-cover">
-              <van-image :src="song.cover" width="100%" height="100%" fit="cover" radius="8px" />
+              <van-image
+                :src="song.cover"
+                width="100%"
+                height="100%"
+                fit="cover"
+                radius="8px"
+                :alt="'封面：' + song.title"
+              />
               <div class="play-overlay">
                 <van-icon name="play-circle-o" size="24" color="#fff" />
               </div>

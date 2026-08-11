@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import request from '@/utils/request'
 
 export const usePlayerStore = defineStore(
   'player',
@@ -19,6 +20,12 @@ export const usePlayerStore = defineStore(
     const seekTime = ref(null)
     // 进度条拖动中标记：拖动时抑制 timeupdate 写回，避免进度条回弹（#10）
     const isDragging = ref(false)
+    // 音频缓冲中：由 useAudio 的 waiting/canplay 事件驱动，UI 据此显示加载态
+    const isBuffering = ref(false)
+    // 音频加载/播放出错标记：由 useAudio 的 error 事件置真，UI 据此显示重试入口
+    const audioError = ref(false)
+    // 用户点击"重试"后置真，App.vue watch 到后调用 useAudio.retryPlayback 并复位
+    const retryRequested = ref(false)
     // 在遇到浏览器自动播放限制时，标记需要在用户交互后恢复播放
     const resumeOnGesture = ref(false)
 
@@ -40,12 +47,29 @@ export const usePlayerStore = defineStore(
 
     // ===== actions =====
 
+    // 列表接口（/api/songs）剥离了 lyrics 字段，播放/切歌时按需拉取详情补全歌词
+    async function fetchLyrics(id) {
+      if (!id) return
+      try {
+        const res = await request.get(`/api/songs/${id}`)
+        const lyrics = res.lyrics
+        // 仅在仍是同一首歌时写入，避免快速切歌时旧歌词覆盖新歌
+        if (currentSong.value?.id === id && lyrics && lyrics.length) {
+          currentSong.value = { ...currentSong.value, lyrics }
+        }
+      } catch {
+        // 歌词加载失败不影响播放，静默降级为"暂无歌词"
+      }
+    }
+
     // 切换当前歌曲：同步重置进度/时长，避免新歌进度条从旧时间点起跳（#15）
     function setCurrentSong(song) {
       currentSong.value = song ? { ...song } : null
       currentTime.value = 0
       duration.value = 0
       seekTime.value = null
+      // 列表接口（/api/songs）剥离了 lyrics 字段，播放/切歌时按需拉取详情补全歌词
+      if (song && !song.lyrics) fetchLyrics(song.id)
     }
 
     function setPlaylist(songs, startIndex = 0) {
@@ -102,6 +126,25 @@ export const usePlayerStore = defineStore(
 
     function setPlaying(state) {
       isPlaying.value = !!state
+    }
+
+    function setBuffering(state) {
+      isBuffering.value = !!state
+    }
+
+    // 音频出错标记：error 事件置真（UI 显示重试），重新加载/成功播放时置假
+    function setAudioError(state) {
+      audioError.value = !!state
+    }
+
+    // 请求重试当前歌曲：由 PlayPage 重试按钮调用，App.vue watch 到后执行 useAudio.retryPlayback
+    function requestRetry() {
+      retryRequested.value = true
+    }
+
+    // 重试执行完成/取消后复位（由 App.vue 调用）
+    function clearRetryRequest() {
+      retryRequested.value = false
     }
 
     function playNext() {
@@ -191,6 +234,12 @@ export const usePlayerStore = defineStore(
       lastVolume,
       seekTime,
       isDragging,
+      isBuffering,
+      audioError,
+      setAudioError,
+      retryRequested,
+      requestRetry,
+      clearRetryRequest,
       resumeOnGesture,
       setResumeOnGesture,
       progress,
@@ -201,6 +250,7 @@ export const usePlayerStore = defineStore(
       playSong,
       togglePlay,
       setPlaying,
+      setBuffering,
       playNext,
       playPrev,
       seekTo,

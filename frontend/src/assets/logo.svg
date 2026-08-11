@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- 渐变圆底 -->
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34c77b"/>
+      <stop offset="100%" stop-color="#006d37"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="46" fill="url(#logoGrad)"/>
+  <!-- 音符：符杆 + 符头 + 符尾 -->
+  <rect x="54" y="26" width="5.5" height="34" rx="2.75" fill="#fff"/>
+  <ellipse cx="45" cy="62" rx="9" ry="6.8" fill="#fff" transform="rotate(-18 45 62)"/>
+  <path d="M59.5 26 Q 72 30 71 42 Q 70 47 66 46 Q 63 45 64 40 Q 64.5 35 59.5 33 Z" fill="#fff"/>
+</svg>

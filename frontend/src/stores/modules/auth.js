@@ -108,6 +108,7 @@ export const useAuthStore = defineStore(
         const msg = err?.response?.data?.error || err?.message || '网络异常'
         const stdErr = new Error(msg)
         stdErr.code = 'HTTP_ERROR'
+        stdErr.original = err
         throw stdErr
       }
     }

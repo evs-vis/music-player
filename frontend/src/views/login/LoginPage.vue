@@ -3,7 +3,7 @@ import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { showToast } from 'vant'
-import logoUrl from '@/assets/logo.png'
+import logoUrl from '@/assets/logo.svg'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -51,7 +51,7 @@ const togglePasswordVisible = () => {
       <!-- Logo 区域 -->
       <div class="logo-area">
         <div class="logo-img-wrapper animate-float">
-          <van-image :src="logoUrl" width="96" height="96" fit="contain" />
+          <van-image :src="logoUrl" width="96" height="96" fit="contain" alt="Music Player 标志" />
         </div>
         <h1 class="app-title">Music Player</h1>
         <p class="app-subtitle">让旋律触动心弦</p>

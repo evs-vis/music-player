@@ -46,14 +46,9 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-// 播放模式图标映射
+// 播放模式图标/颜色映射：切换模式时按钮图标随之变化
 const modeIcon = computed(() => modeConfig[playerStore.playMode]?.icon || 'play')
 const modeColor = computed(() => modeConfig[playerStore.playMode]?.color || '#27ae60')
-// const modeText = computed(
-//   () => modeConfig[playerStore.playMode]?.text || '列表循环'
-// )
-
-const modeActive = computed(() => true)
 
 // 收藏状态
 const isFav = computed(() => {
@@ -95,7 +90,10 @@ watch(
 // 计算拖动位置对应的播放时间
 const seekRatio = (event) => {
   const rect = event.currentTarget.getBoundingClientRect()
-  const x = event.touches ? event.touches[0].clientX : event.clientX
+  // 兼容鼠标（clientX）与触摸（changedTouches/touches）：
+  // touchend/touchcancel 事件没有 touches，需用 changedTouches 才能拿到手指坐标
+  const point = event.touches?.[0] || event.changedTouches?.[0]
+  const x = point?.clientX ?? event.clientX
   const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width))
   return ratio * playerStore.duration
 }
@@ -138,7 +136,6 @@ const toggleFavorite = async () => {
     return
   }
   try {
-    // console.log('currentSong.value', currentSong.value.id)
     await favoritesStore.toggleFavorite(currentSong.value.id)
   } catch {
     showToast({ type: 'fail', message: '操作失败' })
@@ -206,7 +203,8 @@ watch(
 )
 
 // ✅ 歌词滚动动画（按容器独立管理，切换模式/快速跳转时不会互相打架）
-const scrollAnimFrames = new WeakMap()
+// 用 Map（可迭代）而非 WeakMap：key 恒为两个固定 ref，且卸载时需要遍历清理动画帧
+const scrollAnimFrames = new Map()
 
 function scrollToLine(container) {
   const activeLine = container.querySelector('.lyric-line.active')
@@ -265,9 +263,11 @@ onMounted(() => {
 
 // 卸载时取消歌词滚动动画，避免 rAF 空转并持有已卸载容器引用（#20）
 onUnmounted(() => {
-  for (const [, frameId] of scrollAnimFrames) {
+  // Map 可迭代：遍历所有未完成的动画帧并取消，防止 rAF 空转持有已卸载容器
+  scrollAnimFrames.forEach((frameId) => {
     cancelAnimationFrame(frameId)
-  }
+  })
+  scrollAnimFrames.clear()
 })
 </script>
 
@@ -302,8 +302,20 @@ onUnmounted(() => {
               height="100%"
               fit="cover"
               radius="12px"
+              :alt="'专辑封面：' + currentSong.title"
             />
             <div class="vinyl-overlay" />
+            <!-- 音频缓冲 loading：弱网/切歌等待时显示，避免"点了没反应" -->
+            <div v-if="playerStore.isBuffering" class="buffering-mask">
+              <van-loading type="spinner" color="#fff" size="32" />
+            </div>
+            <!-- 音频加载失败重试入口：error 事件置真后显示，点击重新加载当前歌曲 -->
+            <div v-else-if="playerStore.audioError" class="buffering-mask">
+              <button class="retry-btn" @click="playerStore.requestRetry()">
+                <van-icon name="replay" size="20" />
+                <span>音频加载失败，点击重试</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -416,7 +428,7 @@ onUnmounted(() => {
             <button @click="showPlaylistSheet = true">
               <van-icon name="orders-o" size="20" color="#fff" />
             </button>
-            <button @click="changeMode" :class="{ active: modeActive }">
+            <button @click="changeMode" class="active">
               <van-icon :name="modeIcon" :color="modeColor" size="24" />
             </button>
           </div>
@@ -561,6 +573,36 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+.buffering-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  z-index: 2;
+}
+
+// 音频失败重试按钮
+.retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
 @keyframes rotate-slow {
   from {
     transform: rotate(0deg);
@@ -643,7 +685,7 @@ onUnmounted(() => {
 .play-footer {
   position: relative;
   z-index: 10;
-  padding: 0 $safe-margin $md;
+  padding: 0 $safe-margin calc($md + $safe-area-inset-bottom);
 }
 
 .glass-panel {

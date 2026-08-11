@@ -1,13 +1,32 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <meta name="description" content="在线音乐播放器，支持歌单、歌词同步、搜索、收藏与播放历史的移动端 H5 音乐应用">
+    <meta name="theme-color" content="#006d37">
+    <link rel="apple-touch-icon" href="/favicon.ico">
+    <title>Music Player - 在线音乐播放器</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- 首屏骨架：渲染静态内容，不等 JS/接口，降低 FCP/LCP 等待 -->
+      <div class="app-shell">
+        <!-- 骨架不渲染头部（logo + Music Player 标题）与区块标题，由 AppHeader / HomePage 在挂载时一次性渲染，
+             避免刷新时骨架占位与真实内容替换造成闪烁 -->
+        <div class="app-shell-section">
+          <div class="app-shell-card"></div>
+          <div class="app-shell-card"></div>
+          <div class="app-shell-card"></div>
+        </div>
+        <div class="app-shell-section">
+          <div class="app-shell-row"></div>
+          <div class="app-shell-row"></div>
+          <div class="app-shell-row"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -92,7 +92,14 @@ const totalDuration = computed(() => {
         >
           <!-- 封面 -->
           <div class="song-cover">
-            <van-image :src="song.cover" width="48" height="48" radius="12" fit="cover" />
+            <van-image
+              :src="song.cover"
+              width="48"
+              height="48"
+              radius="12"
+              fit="cover"
+              :alt="'封面：' + song.title"
+            />
             <!-- 播放中的动画 -->
             <div v-if="index === currentIndex && playerStore.isPlaying" class="playing-overlay">
               <div class="bar" />

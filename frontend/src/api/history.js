@@ -25,5 +25,5 @@ export const updateSearchHistoryService = (keyword) => {
 }
 //清空搜索历史
 export const deleteSearchHistoryService = () => {
-  return request.delete(`/api/user/search-history/`)
+  return request.delete(`/api/user/search-history`)
 }

@@ -38,7 +38,14 @@ const onPlay = (song) => emit('play', song)
       </div>
       <div v-else class="song-list">
         <div v-for="song in songs" :key="song.id" class="song-item" @click="onPlay(song)">
-          <van-image :src="song.cover" width="44" height="44" radius="8" fit="cover" />
+          <van-image
+            :src="song.cover"
+            width="44"
+            height="44"
+            radius="8"
+            fit="cover"
+            :alt="'封面：' + song.title"
+          />
           <div class="song-info">
             <span class="song-title">{{ song.title }}</span>
             <span class="song-artist">{{ song.artist }}</span>
