@@ -26,7 +26,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: pnpm install --frozen-lockfile
+        # --ignore-scripts 跳过 prepare（husky install）：
+        # 前端已无独立 .git（仓库迁移到根目录），husky 找不到 frontend/.git 会报错；
+        # CI 只需要装依赖 + lint + build，不需要 git hooks
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Lint
         working-directory: frontend
