@@ -27,6 +27,9 @@ backend/public/covers/
 frontend-git-backup/
 frontend-history/
 
+# Claude 工作记录（优化总结/简历/部署指南等，本地保留，不入库）
+_notes/
+
 # 编辑器/系统
 .DS_Store
 
