@@ -2,9 +2,6 @@
 
 前后端分离的移动端 H5 音乐播放器，独立开发。支持全局音频播放、歌词同步高亮、歌单/搜索/收藏、用户账号体系，覆盖从浏览到播放的完整音乐消费链路。
 
-> **GitHub**: [evs-vis/music-player](https://github.com/evs-vis/music-player)
-
----
 
 ## 📑 目录
 

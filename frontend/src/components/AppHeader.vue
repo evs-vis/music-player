@@ -38,8 +38,8 @@ const handleLogin = () => {
     <div class="right" @click="handleLogin">
       <van-image
         :src="avatarSrc"
-        width="31"
-        height="31"
+        width="100%"
+        height="100%"
         round
         fit="cover"
         class="avatar"
@@ -79,6 +79,9 @@ const handleLogin = () => {
   }
 
   .right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 40px;
     height: 40px;
     cursor: pointer;

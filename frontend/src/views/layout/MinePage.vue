@@ -407,6 +407,9 @@ onMounted(() => {
 
 .avatar-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: $md;
 }
 

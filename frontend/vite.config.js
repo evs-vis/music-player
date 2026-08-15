@@ -31,6 +31,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:3000',
+      '/avatars': 'http://localhost:3000', // 头像静态资源代理
       '/covers': 'http://localhost:3000', // 新增封面图代理
       '/audio': 'http://localhost:3000' // 新增音频文件代理
     }
@@ -39,6 +40,7 @@ export default defineConfig({
   preview: {
     proxy: {
       '/api': 'http://localhost:3000',
+      '/avatars': 'http://localhost:3000',
       '/covers': 'http://localhost:3000',
       '/audio': 'http://localhost:3000'
     }

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore, useAuthStore, useHistoryStore } from '@/stores'
+import { usePlayerStore, useAuthStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
 import { showToast } from 'vant'
@@ -11,7 +11,6 @@ const MiniPlayer = defineAsyncComponent(() => import('@/components/MiniPlayer.vu
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
-const historyStore = useHistoryStore()
 // ✅ 是否显示迷你播放器（有当前歌曲即显示）
 const showMiniPlayer = computed(() => playerStore.currentSong !== null)
 
@@ -48,9 +47,6 @@ const goPlaylistDetail = (id) => {
 
 const playSong = (song) => {
   playerStore.playSong(song, hotSongs.value)
-  if (authStore.isLoggedIn) {
-    historyStore.addToHistory(song.id)
-  }
 }
 
 const refreshFavorites = async () => {
