@@ -82,14 +82,12 @@ const playAll = () => {
     showToast('没有可播放的歌曲')
     return
   }
-  playerStore.setPlaylist(originalSongs.value, 0)
-  playerStore.isPlaying = true
+  playerStore.playSongs(originalSongs.value, 0)
 }
 
 // 播放单曲
-const playSong = (song, index) => {
-  playerStore.setPlaylist(originalSongs.value, index)
-  playerStore.isPlaying = true
+const playSong = (index) => {
+  playerStore.playSongs(originalSongs.value, index)
 }
 
 // 收藏（传 song.id，与后端接口一致，PlayPage 同样传 id）
@@ -105,7 +103,7 @@ const toggleFav = async (song) => {
   }
 }
 
-const isFav = (id) => favoritesStore.favoriteSongs.some((s) => s.id === id)
+const isFav = (id) => favoritesStore.isFavorite(id)
 
 const goBack = () => {
   router.back()
@@ -146,7 +144,7 @@ const goBack = () => {
           v-for="(song, index) in playlistInfo.songs"
           :key="song.id"
           class="song-item glass-card"
-          @click="playSong(song, index)"
+          @click="playSong(index)"
         >
           <van-image
             :src="song.cover"

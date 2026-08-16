@@ -148,7 +148,8 @@ export function useAudio() {
 
       if (authStore.isLoggedIn && song.id) {
         const historyStore = useHistoryStore()
-        historyStore.addToHistory(song.id).catch(() => {})
+        // 传完整 song：store 内做本地去重置顶，不再触发整表 GET
+        historyStore.addToHistory(song).catch(() => {})
       }
     } catch {
       // 仅当仍是最新请求时才认为播放被阻止，避免旧请求误把新歌状态改掉
@@ -210,5 +211,5 @@ export function useAudio() {
     }
   })
 
-  return { audio, loadAndPlay, pause, play, seek, setVolume, retryPlayback }
+  return { loadAndPlay, pause, play, seek, setVolume, retryPlayback }
 }

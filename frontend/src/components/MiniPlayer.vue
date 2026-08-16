@@ -7,10 +7,6 @@ const playerStore = usePlayerStore()
 const router = useRouter()
 // 播放列表弹层（组件内部管理，不向父组件抛事件）
 const showPlaylist = ref(false)
-const progressPercent = computed(() => {
-  if (!playerStore.duration) return 0
-  return (playerStore.currentTime / playerStore.duration) * 100
-})
 
 const playIcon = computed(() => (playerStore.isPlaying ? 'pause' : 'play'))
 
@@ -54,7 +50,7 @@ const goPlayPage = () => {
     </div>
     <!-- 进度条 -->
     <div class="progress-bar">
-      <div class="progress-fill" :style="{ width: progressPercent + '%' }" />
+      <div class="progress-fill" :style="{ width: playerStore.progress + '%' }" />
     </div>
   </div>
   <!-- 播放列表弹出层 -->

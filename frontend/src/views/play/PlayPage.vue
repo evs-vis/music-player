@@ -32,29 +32,14 @@ const showVolumeSlider = ref(false)
 // 当前歌曲
 const currentSong = computed(() => playerStore.currentSong)
 
-// 进度百分比
-const progress = computed(() => {
-  if (!playerStore.duration) return 0
-  return (playerStore.currentTime / playerStore.duration) * 100
-})
-
-// 格式化时间
-const formatTime = (seconds) => {
-  if (isNaN(seconds) || seconds < 0) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 // 播放模式图标/颜色映射：切换模式时按钮图标随之变化
 const modeIcon = computed(() => modeConfig[playerStore.playMode]?.icon || 'play')
 const modeColor = computed(() => modeConfig[playerStore.playMode]?.color || '#27ae60')
 
-// 收藏状态
-const isFav = computed(() => {
-  if (!currentSong.value) return false // ← 加这行
-  return favoritesStore.favoriteSongs.some((s) => s.id === currentSong.value.id)
-})
+// 收藏状态：无歌曲时 store 中无对应 id，直接返回 false
+const isFav = computed(() =>
+  currentSong.value ? favoritesStore.isFavorite(currentSong.value.id) : false
+)
 
 // 歌词处理：增量探测（#22）
 // 歌词按 time 升序，timeupdate 每次只前进 0~1 行，从上次索引往后探测平均 O(1)，
@@ -152,10 +137,6 @@ const toggleMute = () => {
   }
 }
 
-const setVolume = (val) => {
-  playerStore.setVolume(val)
-}
-
 // 无歌曲时重定向
 watch(
   () => playerStore.currentSong,
@@ -167,36 +148,24 @@ watch(
   { immediate: true }
 )
 
-// ✅ 歌词索引变化时平滑滚动到当前行（居中）
-watch(currentLyricIndex, () => {
-  nextTick(() => {
-    const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
-    if (container) scrollToLine(container)
-  })
-})
-
-// ✅ 切换 唱片/歌词 模式后，让当前行立即居中
-watch(showLyrics, () => {
-  nextTick(() => {
-    const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
-    if (container) scrollToLine(container)
-  })
-})
+// ✅ 歌词索引变化 / 唱片·歌词模式切换时，让当前行平滑滚动居中
+function scrollActiveLyricLine() {
+  const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
+  if (container) scrollToLine(container)
+}
+watch([currentLyricIndex, showLyrics], () => nextTick(scrollActiveLyricLine))
 
 // ✅ 切换歌曲时重置滚动位置并居中当前行
 watch(
   () => playerStore.currentSong?.id,
   () => {
     nextTick(() => {
-      const mini = lyricsMiniRef.value
-      const full = lyricsFullRef.value
-      if (mini) {
-        mini.scrollTop = 0
-        scrollToLine(mini)
-      }
-      if (full) {
-        full.scrollTop = 0
-        scrollToLine(full)
+      for (const ref of [lyricsMiniRef, lyricsFullRef]) {
+        const el = ref.value
+        if (el) {
+          el.scrollTop = 0
+          scrollToLine(el)
+        }
       }
     })
   }
@@ -256,9 +225,8 @@ function scrollToLine(container) {
 }
 
 onMounted(() => {
-  if (authStore.isLoggedIn) {
-    favoritesStore.loadFavorites()
-  }
+  // 登录会话内已加载过则短路，不重复请求（store 内部处理未登录）
+  favoritesStore.loadFavorites()
 })
 
 // 卸载时取消歌词滚动动画，避免 rAF 空转并持有已卸载容器引用（#20）
@@ -356,8 +324,8 @@ onUnmounted(() => {
         <!-- 进度条 -->
         <div class="progress-area">
           <div class="time-labels">
-            <span>{{ formatTime(playerStore.currentTime) }}</span>
-            <span>{{ formatTime(playerStore.duration) }}</span>
+            <span>{{ playerStore.currentTimeFormatted }}</span>
+            <span>{{ playerStore.durationFormatted }}</span>
           </div>
           <div
             class="progress-bar"
@@ -368,7 +336,7 @@ onUnmounted(() => {
             @touchend="endSeek"
           >
             <div class="progress-track">
-              <div class="progress-fill" :style="{ width: progress + '%' }">
+              <div class="progress-fill" :style="{ width: playerStore.progress + '%' }">
                 <div class="progress-thumb" />
               </div>
             </div>
@@ -418,7 +386,6 @@ onUnmounted(() => {
                   :min="0"
                   :max="1"
                   :step="0.1"
-                  @update:model-value="setVolume"
                   style="width: 80px"
                 />
               </div>

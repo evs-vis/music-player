@@ -92,6 +92,12 @@ export const usePlayerStore = defineStore(
       }
     }
 
+    // 设置播放列表并立即播放（各页面"播放全部/单曲"统一入口）
+    function playSongs(songs, startIndex = 0) {
+      setPlaylist(songs, startIndex)
+      isPlaying.value = true
+    }
+
     function playSong(songOrIndex, list) {
       if (typeof songOrIndex === 'number') {
         const index = songOrIndex
@@ -247,6 +253,7 @@ export const usePlayerStore = defineStore(
       durationFormatted,
       setPlaylist,
       addToPlaylist,
+      playSongs,
       playSong,
       togglePlay,
       setPlaying,

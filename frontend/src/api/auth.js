@@ -31,6 +31,8 @@ export const uploadAvatarService = (file) => {
   const formData = new FormData()
   formData.append('avatar', file)
   return request.post('/api/user/avatar', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    // 页面内已自行处理上传错误提示（showNotify），跳过拦截器统一 toast，避免重复提示/残留
+    suppressErrorToast: true
   })
 }

@@ -75,7 +75,9 @@ instance.interceptors.response.use(
       }
     }
 
-    // 只有最终失败（重试已耗尽或非重试类错误）才走统一错误提示
+    // 只有最终失败（重试已耗尽或非重试类错误）才走统一错误提示；
+    // 请求方自行处理错误提示时（如头像上传组件内已 showNotify）通过 suppressErrorToast 跳过，避免重复提示/残留
+    const shouldToast = !err.config?.__retrySilent && !err.config?.suppressErrorToast
     const authStore = useAuthStore()
     if (err.response) {
       const status = err.response?.status
@@ -85,12 +87,12 @@ instance.interceptors.response.use(
         authStore.logout()
         router.push('/login')
       } else if (status === 500) {
-        if (!err.config?.__retrySilent) showToast(serverMsg || '数据异常，请稍后重试')
+        if (shouldToast) showToast(serverMsg || '数据异常，请稍后重试')
       } else {
-        if (!err.config?.__retrySilent) showToast(serverMsg || '请求失败，请稍后重试')
+        if (shouldToast) showToast(serverMsg || '请求失败，请稍后重试')
       }
     } else {
-      if (!err.config?.__retrySilent) showToast('网络连接失败，请检查网络')
+      if (shouldToast) showToast('网络连接失败，请检查网络')
     }
     return Promise.reject(err)
   }

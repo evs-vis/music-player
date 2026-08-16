@@ -1,9 +1,8 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore, useAuthStore } from '@/stores'
+import { usePlayerStore, useAuthStore, useFavoritesStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
-import { getFavoriteService, updateFavoriteService } from '@/api/favorite'
 import { showToast } from 'vant'
 // 迷你播放器按需异步加载，避免挤占首屏同步 JS
 const MiniPlayer = defineAsyncComponent(() => import('@/components/MiniPlayer.vue'))
@@ -11,13 +10,15 @@ const MiniPlayer = defineAsyncComponent(() => import('@/components/MiniPlayer.vu
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
+const favoritesStore = useFavoritesStore()
 // ✅ 是否显示迷你播放器（有当前歌曲即显示）
 const showMiniPlayer = computed(() => playerStore.currentSong !== null)
 
 const playlists = ref([])
 const hotSongs = ref([])
-const favoriteIds = ref([])
 const loading = ref(true)
+// 正在切换收藏的歌曲 id：切换完成前禁用该行收藏按钮，防连点对非幂等 toggle 接口造成状态错乱
+const favPendingId = ref(null)
 
 const fetchData = async () => {
   // 歌单与歌曲两个接口并行、失败互相隔离：一个失败不拖累另一个，部分数据也能展示
@@ -49,37 +50,28 @@ const playSong = (song) => {
   playerStore.playSong(song, hotSongs.value)
 }
 
-const refreshFavorites = async () => {
-  if (!authStore.isLoggedIn) {
-    favoriteIds.value = []
-    return
-  }
-  try {
-    const res = await getFavoriteService()
-    favoriteIds.value = (res.favorites || []).map((song) => song.id)
-  } catch {
-    favoriteIds.value = []
-  }
-}
-
-const toggleFav = async (song) => {
+const toggleFav = async (songId) => {
   if (!authStore.isLoggedIn) {
     showToast({ type: 'warning', message: '请先登录' })
     return
   }
+  // 上一次切换未完成时忽略本次点击，避免连续点击导致收藏状态错乱
+  if (favPendingId.value) return
+  favPendingId.value = songId
   try {
-    await updateFavoriteService(song.id)
-    await refreshFavorites()
+    await favoritesStore.toggleFavorite(songId)
   } catch {
     showToast({ type: 'fail', message: '操作失败' })
+  } finally {
+    favPendingId.value = null
   }
 }
 
-const isFav = (id) => favoriteIds.value.includes(id)
+const isFav = (id) => favoritesStore.isFavorite(id)
 
 onMounted(() => {
   fetchData()
-  refreshFavorites()
+  favoritesStore.loadFavorites()
 })
 </script>
 
@@ -149,8 +141,9 @@ onMounted(() => {
           </div>
           <button
             class="fav-btn"
-            @click.stop="toggleFav(song)"
+            @click.stop="toggleFav(song.id)"
             :aria-label="isFav(song.id) ? '取消收藏' : '收藏'"
+            :disabled="favPendingId === song.id"
           >
             <van-icon
               :name="isFav(song.id) ? 'like' : 'like-o'"
@@ -352,6 +345,11 @@ onMounted(() => {
   transition: transform 0.2s;
   &:active {
     transform: scale(1.25);
+  }
+  &:disabled {
+    opacity: 0.5;
+    transform: none;
+    cursor: default;
   }
 }
 </style>
