@@ -1,16 +1,14 @@
 <script setup>
 import { ref } from 'vue'
 import { onErrorCaptured } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 
 // 组件级错误边界：隔离渲染错误，展示兜底 UI 并支持重试，避免整棵组件树崩溃。
 const props = defineProps({
   fallbackText: { type: String, default: '页面出错了，点击重试' }
 })
+const emit = defineEmits(['retry'])
 
 const hasError = ref(false)
-const route = useRoute()
-const router = useRouter()
 
 onErrorCaptured((err) => {
   hasError.value = true
@@ -20,7 +18,9 @@ onErrorCaptured((err) => {
 
 const reload = () => {
   hasError.value = false
-  router.replace(route.fullPath)
+  // 通知父级递增 router-view 的 key，强制当前路由组件重挂载。
+  // 错误组件的渲染已失败，同路由 router.replace 不会触发重渲染，仅改 key 无法恢复。
+  emit('retry')
 }
 </script>
 

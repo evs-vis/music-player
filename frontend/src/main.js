@@ -6,9 +6,11 @@ import { setupErrorHandlers } from '@/utils/errorHandler'
 import '@/utils/perf'
 
 // Vant 模板组件样式由 VantResolver 按需引入（vite.config.js）；
-// 这里只补 JS 函数式组件（showToast/showNotify）的样式入口
+// 这里集中补 JS 函数式组件（showToast/showNotify/showConfirmDialog）的样式入口，
+// 页面里只用 import { xx } from 'vant'，无需逐个补样式
 import 'vant/es/toast/style'
 import 'vant/es/notify/style'
+import 'vant/es/dialog/style'
 import '@/styles/notify.css'
 import '@/styles/global.css'
 

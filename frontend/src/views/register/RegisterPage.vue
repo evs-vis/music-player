@@ -37,7 +37,7 @@ const handleRegister = async () => {
       router.replace('/login')
     }, 1500)
   } catch (err) {
-    showToast({ type: 'fail', message: err.msg, position: 'middle' })
+    showToast({ type: 'fail', message: err.message, position: 'middle' })
   } finally {
     loading.value = false
   }
@@ -81,10 +81,12 @@ onMounted(() => {
               <van-field
                 id="username"
                 v-model="username"
+                name="username"
                 type="text"
                 class="glass-input"
                 placeholder="输入您的用户名"
                 autocomplete="username"
+                :rules="[{ required: true, message: '请输入用户名' }]"
                 :disabled="loading"
               />
             </div>
@@ -98,10 +100,12 @@ onMounted(() => {
               <van-field
                 id="password"
                 v-model="password"
+                name="password"
                 :type="passwordVisible ? 'text' : 'password'"
                 class="glass-input pr-12"
                 placeholder="至少 8 位字符"
                 autocomplete="new-password"
+                :rules="[{ required: true, message: '请输入密码' }]"
                 :disabled="loading"
               />
               <button type="button" class="toggle-visibility" @click="togglePasswordVisible">

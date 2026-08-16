@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { showToast } from 'vant'
 import { useRouter } from 'vue-router'
@@ -16,6 +16,18 @@ const loading = ref(false)
 
 const pattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,16}$/
 
+// 三个字段均为 van-field，用 :rules 实时校验（与登录/注册页一致）
+const oldPwdRules = [{ required: true, message: '请输入旧密码' }]
+const newPwdRules = [
+  { required: true, message: '请输入新密码' },
+  { pattern, message: '新密码需为8-16位字母和数字组合' }
+]
+// 确认密码需与「新密码」一致；computed 保证校验时取到最新值
+const confirmRules = computed(() => [
+  { required: true, message: '请再次输入新密码' },
+  { validator: (v) => v === newPassword.value, message: '两次密码不一致' }
+])
+
 const togglePasswordVisible = (index) => {
   if (index === 1) {
     passwordVisible1.value = !passwordVisible1.value
@@ -24,16 +36,8 @@ const togglePasswordVisible = (index) => {
   }
 }
 
-const confirmPwd = (val) => {
-  return val === newPassword.value || '两次输入的密码不一致'
-}
-
 const handleSubmit = async () => {
-  if (newPassword.value !== confirmPassword.value) {
-    showToast({ type: 'warning', message: '两次密码不一致' })
-    return
-  }
-
+  // 校验由 van-field :rules 完成，提交时只需调接口
   loading.value = true
   try {
     await authStore.changePwd({
@@ -49,7 +53,7 @@ const handleSubmit = async () => {
     }, 1500)
   } catch (err) {
     const msg = err.response?.data?.error || '修改失败'
-    showToast({ type: 'danger', message: msg })
+    showToast({ type: 'fail', message: msg })
   } finally {
     loading.value = false
   }
@@ -85,14 +89,15 @@ const handleSubmit = async () => {
             <label class="field-label" for="oldPassword">旧密码</label>
             <div class="input-wrapper">
               <van-icon name="lock" class="input-icon" />
-              <input
+              <van-field
                 id="oldPassword"
                 v-model="password"
+                name="oldPassword"
                 type="password"
-                class="glass-input pr-12"
+                class="glass-input"
                 placeholder="输入旧密码"
                 autocomplete="current-password"
-                :rules="{ required: true, message: '请输入旧密码' }"
+                :rules="oldPwdRules"
               />
             </div>
           </div>
@@ -102,14 +107,15 @@ const handleSubmit = async () => {
             <label class="field-label" for="newPassword">新密码</label>
             <div class="input-wrapper">
               <van-icon name="lock" class="input-icon" />
-              <input
+              <van-field
                 id="newPassword"
                 v-model="newPassword"
+                name="newPassword"
                 :type="passwordVisible1 ? 'text' : 'password'"
                 class="glass-input pr-12"
                 placeholder="至少 8 位字母+数字"
                 autocomplete="new-password"
-                :rules="[{ required: true, message: '请输入8到16位字符', pattern }]"
+                :rules="newPwdRules"
               />
               <button type="button" class="toggle-visibility" @click="togglePasswordVisible(1)">
                 <van-icon :name="passwordVisible1 ? 'eye-o' : 'closed-eye'" />
@@ -123,20 +129,15 @@ const handleSubmit = async () => {
             <label class="field-label" for="confirmPassword">确认新密码</label>
             <div class="input-wrapper">
               <van-icon name="lock" class="input-icon" />
-              <input
+              <van-field
                 id="confirmPassword"
                 v-model="confirmPassword"
+                name="confirmPassword"
                 :type="passwordVisible2 ? 'text' : 'password'"
                 class="glass-input pr-12"
                 placeholder="再次输入新密码"
                 autocomplete="new-password"
-                :rules="[
-                  {
-                    required: true,
-                    validator: confirmPwd,
-                    message: '请确认新密码'
-                  }
-                ]"
+                :rules="confirmRules"
               />
               <button type="button" class="toggle-visibility" @click="togglePasswordVisible(2)">
                 <van-icon :name="passwordVisible2 ? 'eye-o' : 'closed-eye'" />
@@ -306,6 +307,39 @@ const handleSubmit = async () => {
   pointer-events: none;
 }
 
+// van-field 结构重置：清掉 vant 默认外观，玻璃样式由 .glass-input 控制（同 RegisterPage）
+// 注意顺序：本块在前，.glass-input 在后，后者才能覆盖 border/padding
+:deep(.van-field) {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  min-height: auto;
+  .van-field__control {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+  .van-field__left-icon,
+  .van-field__right-icon {
+    display: none;
+  }
+}
+
+// 聚焦态：van-field 的 focused class 落在根节点上（原生 input 的 :focus 不会触发）
+:deep(.van-field--focused) {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: $primary-color;
+  box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.1);
+}
+
+// 占位符在内部 control 上（根节点 ::placeholder 不生效）
+:deep(.van-field__control)::placeholder {
+  color: rgba($text-secondary, 0.6);
+}
+
 .glass-input {
   width: 100%;
   height: 56px;
@@ -320,16 +354,6 @@ const handleSubmit = async () => {
   color: $text-primary;
   transition: all 0.3s;
   outline: none;
-
-  &::placeholder {
-    color: rgba($text-secondary, 0.6);
-  }
-
-  &:focus {
-    background: rgba(255, 255, 255, 0.5);
-    border-color: $primary-color;
-    box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.1);
-  }
 
   &.pr-12 {
     padding-right: 48px;

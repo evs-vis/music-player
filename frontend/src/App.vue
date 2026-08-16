@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { usePlayerStore, useAuthStore } from '@/stores'
 import { useAudio } from '@/composables/useAudio'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
@@ -7,6 +7,8 @@ import { showToast } from 'vant'
 
 const playerStore = usePlayerStore()
 const { loadAndPlay, pause, play, seek, setVolume, retryPlayback } = useAudio()
+// ErrorBoundary 触发重试时递增，强制 router-view 重挂载当前路由组件
+const errorRetryKey = ref(0)
 let lastPlaybackKey = ''
 let saveTimer = null
 const authStore = useAuthStore()
@@ -136,8 +138,8 @@ watch(
 
 <template>
   <div id="app">
-    <ErrorBoundary>
-      <router-view />
+    <ErrorBoundary @retry="errorRetryKey++">
+      <router-view :key="errorRetryKey" />
     </ErrorBoundary>
   </div>
 </template>
