@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import defaultAvatar from '@/assets/avatar.jpg'
 import { usePlayerStore } from './player'
 import {
   userRegisterService,
   userLoginService,
   userChangePwdService,
-  deleteAccountService
+  deleteAccountService,
+  uploadAvatarService
 } from '@/api/auth'
 
 export const useAuthStore = defineStore(
@@ -15,8 +17,30 @@ export const useAuthStore = defineStore(
     const token = ref('')
     const user = ref(null)
 
+    // 头像版本号：每次换头像 +1。后端头像文件名固定为 `/avatars/{userId}{ext}`，
+    // 多次上传 URL 不变 → 浏览器命中缓存不重新拉取 → 头像不回显；getter 里拼 ?v=N 破坏缓存
+    const avatarVersion = ref(0)
+
+    // 头像上传限频：冷却期内不允许再次上传，防止快速连换头像
+    const AVATAR_UPLOAD_COOLDOWN = 3000 // ms
+    const uploading = ref(false)
+    const lastUploadAt = ref(0)
+
     // ====== Getters ======
     const isLoggedIn = computed(() => !!token.value)
+    // 头像地址（数据层派生：自定义头像拼 baseURL，否则用默认头像；页面直接消费）
+    const avatarSrc = computed(() => {
+      if (!user.value?.avatar) return defaultAvatar
+      const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+      const url = baseURL + user.value.avatar
+      return avatarVersion.value ? `${url}?v=${avatarVersion.value}` : url
+    })
+    // 当前是否允许发起头像上传（正在上传或仍在冷却期内则不允许）。
+    // 必须用函数而非 computed：computed 只在响应式依赖变化时重算，时间流逝不会触发重算，
+    // 会导致"等再久都还是冷却中"；函数在每次点击时实时判断时间。
+    function canUpload() {
+      return !uploading.value && Date.now() - lastUploadAt.value >= AVATAR_UPLOAD_COOLDOWN
+    }
 
     // ====== Actions ======
 
@@ -117,6 +141,30 @@ export const useAuthStore = defineStore(
     function updateAvatar(url) {
       if (user.value) {
         user.value.avatar = url
+        avatarVersion.value++ // 换头像 → 版本号 +1 → avatarSrc 变化 → 图片强制重新加载
+      }
+    }
+
+    // 上传头像（数据层：限频 + 调接口 + 更新 store 头像路径；UI 提示由页面负责）
+    async function uploadAvatar(file) {
+      if (uploading.value) {
+        const err = new Error('头像上传中，请稍候')
+        err.code = 'UPLOADING'
+        throw err
+      }
+      if (Date.now() - lastUploadAt.value < AVATAR_UPLOAD_COOLDOWN) {
+        const err = new Error('操作太频繁，请稍后再试')
+        err.code = 'TOO_FREQUENT'
+        throw err
+      }
+      uploading.value = true
+      try {
+        const res = await uploadAvatarService(file)
+        updateAvatar(res.avatar)
+        lastUploadAt.value = Date.now()
+        return res
+      } finally {
+        uploading.value = false
       }
     }
 
@@ -168,12 +216,15 @@ export const useAuthStore = defineStore(
       token,
       user,
       isLoggedIn,
+      avatarSrc,
+      canUpload,
       register,
       login,
       logout,
       deleteAccount,
       changePwd,
-      updateAvatar
+      updateAvatar,
+      uploadAvatar
     }
   },
   // 持久化配置

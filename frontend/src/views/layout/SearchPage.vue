@@ -5,6 +5,7 @@ import { usePlayerStore, useAuthStore, useSearchHistoryStore } from '@/stores'
 import { showToast } from 'vant'
 import { getSongsService } from '@/api/playlist'
 import { useDebounceFn } from '@vueuse/core'
+import { CATEGORIES } from '@/constants/categories'
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
@@ -28,33 +29,17 @@ const hotList = ref([
   { rank: 5, title: '向云端', artist: '小霞 / 海洋Bo', album: '' }
 ])
 
-// 推荐分类（id 与歌曲 category 字段一致，详情页按英文 id 匹配）
-const categories = ref([
-  {
-    id: 'pop',
-    name: '流行',
-    gradient: 'linear-gradient(135deg, #27AE60, #006d37)',
-    icon: 'music-o'
-  },
-  {
-    id: 'rock',
-    name: '摇滚',
-    gradient: 'linear-gradient(135deg, #f26d83, #a7344c)',
-    icon: 'fire-o'
-  },
-  {
-    id: 'classical',
-    name: '古典',
-    gradient: 'linear-gradient(135deg, #96f7b0, #006d38)',
-    icon: 'piano-o'
-  },
-  {
-    id: 'jazz',
-    name: '爵士',
-    gradient: 'linear-gradient(135deg, #ffb2bb, #871b35)',
-    icon: 'flower-o'
-  }
-])
+// 推荐分类（身份数据来自共享常量；gradient 为卡片渐变，仅本页展示的分类定义）
+const categoryGradients = {
+  pop: 'linear-gradient(135deg, #27AE60, #006d37)',
+  rock: 'linear-gradient(135deg, #f26d83, #a7344c)',
+  classical: 'linear-gradient(135deg, #96f7b0, #006d38)',
+  jazz: 'linear-gradient(135deg, #ffb2bb, #871b35)'
+}
+const categories = CATEGORIES.filter((c) => categoryGradients[c.id]).map((c) => ({
+  ...c,
+  gradient: categoryGradients[c.id]
+}))
 
 // ---------- 核心搜索函数 ----------
 const performSearch = async (keyword) => {
@@ -124,14 +109,15 @@ const clearHistorySearches = async () => {
   try {
     await searchHistoryStore.clearHistory()
     showToast('已清空搜索历史')
+  } catch {
+    showToast({ type: 'fail', message: '清空失败，请重试' })
   } finally {
     loading.value = false
   }
 }
 // 播放歌曲
 const playSong = (song) => {
-  playerStore.setPlaylist([song], 0)
-  playerStore.isPlaying = true
+  playerStore.playSongs([song], 0)
 }
 // 添加到播放列表
 const addToPlaylist = (song) => {

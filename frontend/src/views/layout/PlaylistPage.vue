@@ -4,21 +4,23 @@ import { useRouter } from 'vue-router'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { usePlayerStore } from '@/stores'
 import { showToast } from 'vant'
+import { CATEGORIES } from '@/constants/categories'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
 
-// 分类列表
-const categories = [
-  { id: 'pop', name: '流行', icon: 'music-o', color: '#27AE60' },
-  { id: 'rock', name: '摇滚', icon: 'fire-o', color: '#a7344c' },
-  { id: 'jazz', name: '爵士', icon: 'piano-o', color: '#006d38' },
-  { id: 'classical', name: '古典', icon: 'flower-o', color: '#005228' },
-  { id: 'electronic', name: '电子', icon: 'service-o', color: '#27AE60' },
-  { id: 'hiphop', name: '说唱', icon: 'audio-o', color: '#005228' },
-  { id: 'rnb', name: '蓝调', icon: 'like-o', color: '#ba1a1a' },
-  { id: 'ambient', name: '氛围', icon: 'cloud-o', color: '#7F8C8D' }
-]
+// 分类列表（id/name/icon 来自共享常量；color 为分类卡片配色，仅本页使用）
+const categoryColors = {
+  pop: '#27AE60',
+  rock: '#a7344c',
+  jazz: '#006d38',
+  classical: '#005228',
+  electronic: '#27AE60',
+  hiphop: '#005228',
+  rnb: '#ba1a1a',
+  ambient: '#7F8C8D'
+}
+const categories = CATEGORIES.map((c) => ({ ...c, color: categoryColors[c.id] }))
 
 // 推荐歌单
 const featuredPlaylist = ref(null)
@@ -50,12 +52,11 @@ const playFeaturedPlaylist = async () => {
   try {
     const res = await getSongsService()
     const allSongs = res.songs
-    const playlistSongs = featuredPlaylist.value.songIds
+    const playlistSongs = (featuredPlaylist.value.songIds || [])
       .map((id) => allSongs.find((s) => s.id === id))
       .filter(Boolean)
     if (playlistSongs.length > 0) {
-      playerStore.setPlaylist(playlistSongs, 0)
-      playerStore.isPlaying = true
+      playerStore.playSongs(playlistSongs, 0)
     }
   } catch {
     showToast({ type: 'fail', message: '播放失败' })

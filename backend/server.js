@@ -396,8 +396,18 @@ if (!fs.existsSync(avatarsDir)) {
   fs.mkdirSync(avatarsDir, { recursive: true })
 }
 
+// 头像上传限频（内存，按用户）：与前端 auth store 的 3s 冷却一致，后端兜底防绕过 UI 直接刷接口
+const avatarUploadThrottle = new Map() // userId -> 上次上传成功时间戳
+const AVATAR_UPLOAD_COOLDOWN_MS = 3000
+
 // 上传头像
 app.post('/api/user/avatar', user, uploadAvatar.single('avatar'), (req, res) => {
+  const now = Date.now()
+  const last = avatarUploadThrottle.get(req.userId) || 0
+  if (now - last < AVATAR_UPLOAD_COOLDOWN_MS) {
+    return res.status(429).json({ error: '操作太频繁，请稍后再试' })
+  }
+
   if (!req.file) {
     return res.status(400).json({ error: '请选择图片' })
   }
@@ -425,6 +435,9 @@ app.post('/api/user/avatar', user, uploadAvatar.single('avatar'), (req, res) => 
   // 更新用户数据（内存 store 修改 + 防抖落盘）
   users[userIndex].avatar = `/avatars/${filename}`
   usersStore.touch()
+
+  // 成功才记录时间戳：校验失败/写盘失败不触发冷却，避免"刚失败又要等"
+  avatarUploadThrottle.set(req.userId, Date.now())
 
   res.json({ avatar: `/avatars/${filename}`, message: '头像更新成功' })
 })

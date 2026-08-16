@@ -2,10 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore, usePlayerStore, useFavoritesStore, useHistoryStore } from '@/stores'
-import defaultAvatar from '@/assets/avatar.jpg'
-import { uploadAvatarService } from '@/api/auth'
-import { showToast, showNotify, showConfirmDialog } from 'vant'
-
+import { showToast, showNotify, showConfirmDialog, closeToast } from 'vant'
 import SongListPopup from '@/components/SongListPopup.vue'
 
 const router = useRouter()
@@ -26,8 +23,7 @@ const recentPlays = computed(() => historyStore.historyList.slice(0, 6))
 
 // 播放歌曲
 const playSong = (song) => {
-  playerStore.setPlaylist([song], 0)
-  playerStore.isPlaying = true
+  playerStore.playSongs([song], 0)
 }
 
 // 跳转登录
@@ -35,34 +31,40 @@ const goLogin = () => {
   router.push('/login')
 }
 
-// 跳转到收藏列表
+// 收藏/历史弹层开关（按钮仅在登录态渲染，无需登录校验）
 const goFavorites = () => {
-  if (!isLoggedIn.value) {
-    goLogin()
-    return
-  }
-  // 可以跳转到一个专门的收藏列表页，这里简单处理
   showFavorites.value = !showFavorites.value
 }
-
 const goHistory = () => {
-  if (!isLoggedIn.value) {
-    goLogin()
-    return
-  }
-  // 可以跳转到一个专门的收藏列表页，这里简单处理
   showHistory.value = !showHistory.value
 }
 // 点击播放
 const playFromPopup = (song) => {
-  playerStore.setPlaylist([song], 0)
-  playerStore.isPlaying = true
+  playSong(song)
   // 关闭弹层
   showFavorites.value = false
   showHistory.value = false
 }
 const showFavorites = ref(false)
 const showHistory = ref(false)
+// 清空播放历史（二次确认后调 store 数据层清空，UI 提示留在页面）
+const clearHistory = async () => {
+  try {
+    await showConfirmDialog({
+      title: '清空播放历史',
+      message: '确定要清空所有播放历史吗？此操作不可恢复。',
+      confirmButtonText: '清空'
+    })
+  } catch {
+    return // 用户取消
+  }
+  try {
+    await historyStore.clearHistory()
+    showToast({ type: 'success', message: '已清空播放历史' })
+  } catch {
+    showToast({ type: 'fail', message: '清空失败，请重试' })
+  }
+}
 // 注销账号（#39）：二次确认后删除账号并跳转登录页
 const deleteAccount = async () => {
   try {
@@ -97,18 +99,15 @@ const menuItems = [
   { icon: 'question-o', label: '帮助与反馈', action: () => {} },
   { icon: 'delete-o', label: '注销账号', danger: true, action: deleteAccount }
 ]
-// 头像地址
-const avatarSrc = computed(() => {
-  const customAvatar = authStore.user?.avatar
-  if (customAvatar) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || ''
-    return baseURL + customAvatar
-  }
-  return defaultAvatar
-})
 // 点击头像触发文件选择
 const updatePic = () => {
   if (!isLoggedIn.value) return
+  // 冷却期内直接拦截，不发文件选择框（store 侧 uploadAvatar 也有兜底限频）。
+  // canUpload 是函数，点击时实时判断时间，不会因 computed 缓存导致永远冷却中
+  if (!authStore.canUpload()) {
+    showToast({ type: 'warning', message: '操作太频繁，请稍后再试' })
+    return
+  }
   fileInput.value?.click()
 }
 // 选择文件后上传
@@ -124,13 +123,13 @@ const handleFileChange = async (event) => {
 
   try {
     showToast({ message: '上传中...', duration: 0, forbidClick: true })
-    const res = await uploadAvatarService(file)
-    // 更新 store 中的头像路径
-    authStore.user.avatar = res.avatar
+    await authStore.uploadAvatar(file)
     showToast({ message: '头像更新成功', icon: 'success' })
   } catch (error) {
     console.error(error)
-    const msg = error?.response?.data?.error || '上传失败，请重试'
+    // 先关闭「上传中」loading toast（duration:0 不会自动关闭，不关会永久锁屏）
+    closeToast()
+    const msg = error?.response?.data?.error || error?.message || '上传失败，请重试'
     showNotify({
       type: 'danger',
       message: msg
@@ -140,11 +139,10 @@ const handleFileChange = async (event) => {
     event.target.value = ''
   }
 }
+// store 内部已处理未登录（loadFavorites 清空、loadHistory 短路），无需外层判断
 onMounted(() => {
-  if (isLoggedIn.value) {
-    favoritesStore.loadFavorites()
-    historyStore.loadHistory()
-  }
+  favoritesStore.loadFavorites()
+  historyStore.loadHistory()
 })
 </script>
 
@@ -160,7 +158,7 @@ onMounted(() => {
     <div v-if="!isLoggedIn" class="login-section">
       <div class="login-card glass-card">
         <van-image
-          :src="avatarSrc"
+          :src="authStore.avatarSrc"
           width="80"
           height="80"
           round
@@ -182,7 +180,7 @@ onMounted(() => {
         <div class="profile-card glass-card" @click="updatePic">
           <div class="avatar-wrapper">
             <van-image
-              :src="avatarSrc"
+              :src="authStore.avatarSrc"
               width="72"
               height="72"
               round
@@ -320,7 +318,9 @@ onMounted(() => {
       title="最近播放"
       :songs="historyStore.historyList"
       empty-text="还没有播放记录"
+      clearable
       @play="playFromPopup"
+      @clear="clearHistory"
     />
   </div>
   <settings-drawer v-model:show="showSettings"></settings-drawer>

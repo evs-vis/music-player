@@ -1,17 +1,9 @@
 <script setup>
 import logoUrl from '@/assets/logo.svg'
-import avatarUrl from '@/assets/avatar.jpg'
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 const router = useRouter()
 const authStore = useAuthStore()
-const baseURL = import.meta.env.VITE_API_BASE_URL || ''
-const avatarSrc = computed(() => {
-  const custom = authStore.user?.avatar
-  if (custom) return baseURL + custom
-  return avatarUrl
-})
 const handleLogin = () => {
   // 未登录先跳登录页并 return，避免紧接着 push /mine 造成跳转竞态
   if (!authStore.isLoggedIn) {
@@ -37,7 +29,7 @@ const handleLogin = () => {
 
     <div class="right" @click="handleLogin">
       <van-image
-        :src="avatarSrc"
+        :src="authStore.avatarSrc"
         width="100%"
         height="100%"
         round
@@ -51,7 +43,6 @@ const handleLogin = () => {
 
 <style lang="scss" scoped>
 .app-header {
-  // position: sticky;
   top: 0;
   z-index: 40;
   display: flex;
