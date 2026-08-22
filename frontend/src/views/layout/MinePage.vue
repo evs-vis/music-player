@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore, usePlayerStore, useFavoritesStore, useHistoryStore } from '@/stores'
 import { showToast, showNotify, showConfirmDialog, closeToast } from 'vant'
 import SongListPopup from '@/components/SongListPopup.vue'
+import { mediumUrl } from '@/utils/image'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -115,9 +116,10 @@ const handleFileChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // 校验文件大小（2MB）
-  if (file.size > 2 * 1024 * 1024) {
-    showNotify({ type: 'warning', message: '图片不能超过2MB' })
+  // 校验文件大小（10MB 硬上限）：上传前 store 会压缩至 ≤256px WebP（恒远小于后端 2MB 限制），
+  // 此处只拦超大的异常文件，避免手机原图（常超 2MB）被误拒
+  if (file.size > 10 * 1024 * 1024) {
+    showNotify({ type: 'warning', message: '图片不能超过10MB' })
     return
   }
 
@@ -237,7 +239,7 @@ onMounted(() => {
           >
             <div class="recent-cover">
               <van-image
-                :src="song.cover"
+                :src="song.coverMedium || mediumUrl(song.cover) || song.coverThumb || song.cover"
                 width="100%"
                 height="100%"
                 fit="cover"

@@ -15,6 +15,7 @@ const app = express();
 const PORT = 3000;
 
 const multer = require('multer');
+const sharp = require('sharp');
 
 // 中间件（访问日志放最前，覆盖全部请求）
 app.use(accessLog);
@@ -60,8 +61,8 @@ ensureDataFile('history.json', {});
 // ====== 公共 API ======
 
 // 封面地址改写：数据文件存的是 PNG（/covers/N.png），已由 scripts/optimize-covers.mjs
-// 批量转为 WebP（/covers/N.webp 大图 480px、/covers/N-112.webp 列表小图 112px）。
-// 这里统一把 cover 改写为 WebP 大图，并补充 coverThumb 小图，前端零改动即受益。
+// 批量转为 WebP（/covers/N.webp 大图 480px、/covers/N-240.webp 中图 240px、/covers/N-112.webp 列表小图 112px）。
+// 这里统一把 cover 改写为 WebP 大图，并补充 coverMedium/coverThumb 缩略图，前端零改动即受益。
 function withWebpCover(song) {
   if (!song) return song;
   const cover = song.cover || '';
@@ -69,6 +70,7 @@ function withWebpCover(song) {
   return {
     ...song,
     cover: webp,
+    coverMedium: webp.replace(/\.webp$/i, '-240.webp'),
     coverThumb: webp.replace(/\.webp$/i, '-112.webp')
   };
 }
@@ -112,12 +114,17 @@ app.get('/api/songs/:id', (req, res) => {
 
 // 获取所有推荐歌单
 app.get('/api/playlists', (req, res) => {
-  // 为每个歌单填充歌曲详情（可选，此处只返回歌单基础信息）
-  // 歌单封面同样改写为 WebP（与歌曲封面同一套资源）
-  const plWithCover = (playlists || []).map(pl => ({
-    ...pl,
-    cover: (pl.cover || '').replace(/\.(png|jpe?g|gif)$/i, '.webp')
-  }));
+  // 歌单封面同样改写为 WebP 并补齐缩略图（与歌曲封面同一套资源）：
+  // cover 大图 480px（详情 hero）、coverMedium 中图 240px（首页歌单卡）、coverThumb 小图 112px（推荐小卡）
+  const plWithCover = (playlists || []).map(pl => {
+    const webp = (pl.cover || '').replace(/\.(png|jpe?g|gif)$/i, '.webp');
+    return {
+      ...pl,
+      cover: webp,
+      coverMedium: webp.replace(/\.webp$/i, '-240.webp'),
+      coverThumb: webp.replace(/\.webp$/i, '-112.webp')
+    };
+  });
   res.json({ playlists: plWithCover });
 });
 
@@ -396,12 +403,36 @@ if (!fs.existsSync(avatarsDir)) {
   fs.mkdirSync(avatarsDir, { recursive: true })
 }
 
+// 头像尺寸上限：最大显示约 80px（登录卡），按 2x DPR 取 160px 足够清晰
+const AVATAR_MAX_SIZE = 160
+const AVATAR_MAX_QUALITY = 82
+// 已是优化态的头像判定体积阈值（≤160px WebP 通常远小于此值）
+const AVATAR_OPTIMIZED_BYTES = 12 * 1024
+
+/**
+ * 服务端头像压缩：decode → 保留 EXIF 方向 → 按最大边长 160px 等比缩小（不放大）→ WebP。
+ * 无论客户端是否压缩，落盘的头像恒为 ≤160px WebP，保证小尺寸显示不加载大头像。
+ * 返回压缩后的 Buffer；失败时抛错，由调用方回退原文件。
+ */
+async function compressAvatar(buf) {
+  return await sharp(buf)
+    .rotate()
+    .resize({
+      width: AVATAR_MAX_SIZE,
+      height: AVATAR_MAX_SIZE,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .webp({ quality: AVATAR_MAX_QUALITY })
+    .toBuffer()
+}
+
 // 头像上传限频（内存，按用户）：与前端 auth store 的 3s 冷却一致，后端兜底防绕过 UI 直接刷接口
 const avatarUploadThrottle = new Map() // userId -> 上次上传成功时间戳
 const AVATAR_UPLOAD_COOLDOWN_MS = 3000
 
 // 上传头像
-app.post('/api/user/avatar', user, uploadAvatar.single('avatar'), (req, res) => {
+app.post('/api/user/avatar', user, uploadAvatar.single('avatar'), async (req, res) => {
   const now = Date.now()
   const last = avatarUploadThrottle.get(req.userId) || 0
   if (now - last < AVATAR_UPLOAD_COOLDOWN_MS) {
@@ -428,19 +459,92 @@ app.post('/api/user/avatar', user, uploadAvatar.single('avatar'), (req, res) => 
     return res.status(404).json({ error: '用户不存在' })
   }
 
-  // 原子写盘（临时文件 + rename），文件名由服务端根据魔数决定
-  const filename = `${req.userId}${ext}`
-  writeFileAtomic(path.join(avatarsDir, filename), req.file.buffer)
+  // 服务端压缩：恒定为 ≤160px WebP 落盘（无论客户端是否压缩，避免大头像漏入）；
+  // sharp 压缩失败（如异常动图）回退原文件 + 原扩展名
+  const oldAvatar = users[userIndex].avatar
+  let filename = `${req.userId}.webp`
+  let payload = req.file.buffer
+  try {
+    payload = await compressAvatar(req.file.buffer)
+  } catch (e) {
+    console.error(`[avatar] sharp 压缩失败，回退原文件：${e.message}`)
+    filename = `${req.userId}${ext}`
+  }
+
+  // 原子写盘（临时文件 + rename），文件名由服务端决定
+  writeFileAtomic(path.join(avatarsDir, filename), payload)
 
   // 更新用户数据（内存 store 修改 + 防抖落盘）
   users[userIndex].avatar = `/avatars/${filename}`
   usersStore.touch()
+
+  // 旧头像清理（best-effort）：换新文件后删除旧文件，避免磁盘堆积（同名时跳过）
+  if (oldAvatar && path.basename(oldAvatar) !== filename) {
+    try {
+      fs.unlinkSync(path.join(avatarsDir, path.basename(oldAvatar)))
+    } catch (e) {
+      /* 旧文件可能已被迁移/不存在，忽略 */
+    }
+  }
 
   // 成功才记录时间戳：校验失败/写盘失败不触发冷却，避免"刚失败又要等"
   avatarUploadThrottle.set(req.userId, Date.now())
 
   res.json({ avatar: `/avatars/${filename}`, message: '头像更新成功' })
 })
+
+/**
+ * 启动自愈迁移：把历史遗留的大头像压缩为 ≤160px WebP 并更新用户路径。
+ * （上传压缩功能上线前遗留的旧文件可达 100KB+，见"图片按显示尺寸交付"优化。）
+ * 幂等：已是「.webp 且 ≤160px 且 ≤12KB」的头像跳过；损坏/缺失文件跳过不中断启动。
+ * 迁移完成后 flushNowSync 立即落盘，避免防抖窗口内进程被杀丢更新。
+ */
+async function migrateLegacyAvatars() {
+  const users = usersStore.get()
+  if (!Array.isArray(users)) return
+  let changed = false
+  for (const u of users) {
+    const avatar = u.avatar
+    if (!avatar || !avatar.startsWith('/avatars/')) continue
+    const filePath = path.join(avatarsDir, path.basename(avatar))
+    if (!fs.existsSync(filePath)) continue
+    try {
+      const stat = fs.statSync(filePath)
+      const meta = await sharp(filePath).metadata()
+      const alreadySmall =
+        /\.webp$/i.test(avatar) &&
+        (meta.width || 0) <= AVATAR_MAX_SIZE &&
+        (meta.height || 0) <= AVATAR_MAX_SIZE &&
+        stat.size <= AVATAR_OPTIMIZED_BYTES
+      if (alreadySmall) continue
+
+      const compressed = await compressAvatar(fs.readFileSync(filePath))
+      const newFile = path.join(avatarsDir, `${u.id}.webp`)
+      writeFileAtomic(newFile, compressed)
+      const oldPath = u.avatar
+      u.avatar = `/avatars/${u.id}.webp`
+      // 成功后删除旧文件，避免磁盘堆积（新旧同名时跳过）
+      if (path.basename(oldPath) !== `${u.id}.webp`) {
+        try {
+          fs.unlinkSync(filePath)
+        } catch (e) {
+          /* 旧文件删除失败不影响主流程 */
+        }
+      }
+      changed = true
+      console.log(
+        `[avatar] 迁移 ${u.username || u.id}: ${oldPath} → ${u.avatar} ` +
+          `(${(stat.size / 1024).toFixed(1)}KB → ${(compressed.length / 1024).toFixed(1)}KB)`
+      )
+    } catch (e) {
+      console.warn(`[avatar] 迁移跳过 ${u.username || u.id}（${avatar}）：${e.message}`)
+    }
+  }
+  if (changed) {
+    usersStore.flushNowSync()
+    console.log('[avatar] 遗留头像迁移完成，已落盘。')
+  }
+}
 
 
 
@@ -494,6 +598,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器错误' });
 });
 
-app.listen(PORT, () => {
-  console.log(`后端服务已启动：http://localhost:${PORT}`);
-});
+// 启动前先跑遗留头像迁移（幂等、异常不阻塞启动），完成后开始监听
+migrateLegacyAvatars()
+  .catch((e) => console.warn('[avatar] 启动迁移异常：', e.message))
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`后端服务已启动：http://localhost:${PORT}`);
+    });
+  });

@@ -5,6 +5,7 @@ import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { usePlayerStore } from '@/stores'
 import { showToast } from 'vant'
 import { CATEGORIES } from '@/constants/categories'
+import { thumbUrl } from '@/utils/image'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
@@ -98,7 +99,7 @@ onMounted(() => {
       <div class="featured-card glass-card">
         <div class="cover-wrapper">
           <van-image
-            :src="featuredPlaylist.cover"
+            :src="featuredPlaylist.coverThumb || thumbUrl(featuredPlaylist.cover)"
             width="80"
             height="80"
             radius="8"

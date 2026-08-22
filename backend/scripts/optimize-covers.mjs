@@ -1,8 +1,9 @@
 /**
  * 封面图批量优化脚本
  *
- * 把 backend/public/covers/*.png 转为 WebP 并输出两个尺寸：
+ * 把 backend/public/covers/*.png 转为 WebP 并输出三个尺寸：
  *   - `N.webp`        480px 宽 —— 播放页全屏大图
+ *   - `N-240.webp`    240px 宽 —— 歌单卡片/最近播放等中尺寸显示（176px/120px 显示按 2x 取 240px）
  *   - `N-112.webp`    112px 宽 —— 首页/搜索/列表小图（56px 显示按 2x 取 112px）
  *
  * 保留原 PNG（不删除，避免破坏既有引用/上传）。
@@ -19,13 +20,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const coversDir = path.resolve(__dirname, '..', 'public', 'covers')
 
 const LARGE_WIDTH = 480 // 播放页全屏大图宽度
+const MEDIUM_WIDTH = 240 // 中尺寸图宽度（176px 歌单卡 / 120px 最近播放，2x DPR 取 240px）
 const THUMB_WIDTH = 112 // 列表小图宽度（56px 显示 × 2x DPR）
 const QUALITY = 80 // WebP 质量
 
 async function main() {
   const files = fs
     .readdirSync(coversDir)
-    .filter((f) => /\.(png|jpe?g|gif|webp)$/i.test(f) && !f.startsWith('.'))
+    // 跳过已生成的 WebP；同时过滤 `-数字.扩展名` 的源文件（如 foo-240.png），
+    // 避免它派生的输出名与 foo.png 的中尺寸（foo-240.webp）命名碰撞
+    .filter(
+      (f) =>
+        /\.(png|jpe?g|gif)$/i.test(f) &&
+        !f.startsWith('.') &&
+        !/-\d+\.(png|jpe?g|gif)$/i.test(f)
+    )
     .sort()
 
   if (files.length === 0) {
@@ -40,9 +49,6 @@ async function main() {
   for (const file of files) {
     const srcPath = path.join(coversDir, file)
     const base = path.basename(file, path.extname(file)) // 去掉扩展名，例如 "1"
-    // 已生成的 WebP 跳过（避免把 WebP 再转一遍）
-    if (path.extname(file).toLowerCase() === '.webp') continue
-
     const statBefore = fs.statSync(srcPath).size
     totalBefore += statBefore
 
@@ -66,6 +72,13 @@ async function main() {
         out: path.join(coversDir, `${base}.webp`)
       })
     }
+
+    // 中尺寸：240px
+    outputs.push({
+      size: 'medium',
+      width: MEDIUM_WIDTH,
+      out: path.join(coversDir, `${base}-240.webp`)
+    })
 
     // 小图：112px
     outputs.push({

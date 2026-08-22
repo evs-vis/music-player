@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores'
 import { useRouter } from 'vue-router'
 import PlaylistSheet from './PlaylistSheet.vue'
+import { thumbUrl } from '@/utils/image'
 const playerStore = usePlayerStore()
 const router = useRouter()
 // 播放列表弹层（组件内部管理，不向父组件抛事件）
@@ -19,7 +20,7 @@ const goPlayPage = () => {
 <template>
   <div v-if="playerStore.currentSong" class="mini-player glass-card" @click="goPlayPage">
     <van-image
-      :src="playerStore.currentSong.cover"
+      :src="playerStore.currentSong.coverThumb || thumbUrl(playerStore.currentSong.cover)"
       width="48"
       height="48"
       radius="8"

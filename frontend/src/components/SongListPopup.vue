@@ -1,4 +1,5 @@
 <script setup>
+import { thumbUrl } from '@/utils/image'
 defineProps({
   show: Boolean,
   title: { type: String, default: '' },
@@ -38,7 +39,7 @@ const onPlay = (song) => emit('play', song)
       <div v-else class="song-list">
         <div v-for="song in songs" :key="song.id" class="song-item" @click="onPlay(song)">
           <van-image
-            :src="song.cover"
+            :src="song.coverThumb || thumbUrl(song.cover)"
             width="44"
             height="44"
             radius="8"

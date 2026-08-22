@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useFavoritesStore } from '@/stores'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
 import { showToast } from 'vant'
+import { mediumUrl, thumbUrl } from '@/utils/image'
 // 迷你播放器按需异步加载，避免挤占首屏同步 JS
 const MiniPlayer = defineAsyncComponent(() => import('@/components/MiniPlayer.vue'))
 
@@ -94,7 +95,10 @@ onMounted(() => {
           class="playlist-card glass-card"
           @click="goPlaylistDetail(pl.id)"
         >
-          <div class="card-bg" :style="{ backgroundImage: `url(${pl.cover})` }" />
+          <div
+            class="card-bg"
+            :style="{ backgroundImage: `url(${pl.coverMedium || mediumUrl(pl.cover)})` }"
+          />
           <div class="card-overlay" />
           <span class="card-name">{{ pl.name }}</span>
         </div>
@@ -125,7 +129,7 @@ onMounted(() => {
           @click="playSong(song, idx)"
         >
           <van-image
-            :src="song.coverThumb || song.cover"
+            :src="song.coverThumb || thumbUrl(song.cover)"
             width="56"
             height="56"
             radius="8"

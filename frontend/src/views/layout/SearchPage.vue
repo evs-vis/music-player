@@ -6,6 +6,7 @@ import { showToast } from 'vant'
 import { getSongsService } from '@/api/playlist'
 import { useDebounceFn } from '@vueuse/core'
 import { CATEGORIES } from '@/constants/categories'
+import { thumbUrl } from '@/utils/image'
 const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
@@ -185,7 +186,7 @@ onUnmounted(() => {
             <van-icon name="add-o" size="20" color="#27ae60" />
           </button>
           <van-image
-            :src="song.cover"
+            :src="song.coverThumb || thumbUrl(song.cover)"
             width="48"
             height="48"
             radius="8"

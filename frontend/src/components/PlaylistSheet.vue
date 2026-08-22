@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '@/stores'
 import { showToast } from 'vant'
+import { thumbUrl } from '@/utils/image'
 
 const props = defineProps({
   show: {
@@ -93,7 +94,7 @@ const totalDuration = computed(() => {
           <!-- 封面 -->
           <div class="song-cover">
             <van-image
-              :src="song.cover"
+              :src="song.coverThumb || thumbUrl(song.cover)"
               width="48"
               height="48"
               radius="12"

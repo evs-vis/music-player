@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore, useFavoritesStore, useAuthStore } from '@/stores'
 import { showToast } from 'vant'
 import { getPlaylistsService, getSongsService } from '@/api/playlist'
+import { thumbUrl } from '@/utils/image'
 
 const route = useRoute()
 const router = useRouter()
@@ -116,7 +117,7 @@ const goBack = () => {
     <div
       class="header-bg"
       :style="{
-        backgroundImage: `url(${playlistInfo.cover || '/covers/default.jpg'})`
+        backgroundImage: `url(${playlistInfo.cover || '/covers/default.webp'})`
       }"
     >
       <div class="header-overlay" />
@@ -147,7 +148,7 @@ const goBack = () => {
           @click="playSong(index)"
         >
           <van-image
-            :src="song.cover"
+            :src="song.coverThumb || thumbUrl(song.cover)"
             width="50"
             height="50"
             radius="8"
