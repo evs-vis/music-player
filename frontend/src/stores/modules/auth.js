@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import defaultAvatar from '@/assets/avatar.jpg'
+import defaultAvatar from '@/assets/avatar.webp'
+import { compressImageFile } from '@/utils/image'
 import { usePlayerStore } from './player'
 import {
   userRegisterService,
@@ -159,7 +160,9 @@ export const useAuthStore = defineStore(
       }
       uploading.value = true
       try {
-        const res = await uploadAvatarService(file)
+        // 上传前压缩：原图缩放至 ≤256px 并转 WebP，头像体积约 100KB → 10KB（压缩失败回退原文件）
+        const uploadFile = await compressImageFile(file)
+        const res = await uploadAvatarService(uploadFile)
         updateAvatar(res.avatar)
         lastUploadAt.value = Date.now()
         return res
@@ -229,6 +232,6 @@ export const useAuthStore = defineStore(
   },
   // 持久化配置
   {
-    persist: { paths: ['token', 'user'] }
+    persist: { paths: ['token', 'user', 'avatarVersion'] }
   }
 )
