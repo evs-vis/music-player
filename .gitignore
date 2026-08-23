@@ -30,6 +30,9 @@ frontend-history/
 # Claude 工作记录与角色设定（优化总结/简历/部署指南/CLAUDE.md 等，本地保留，不入库）
 _notes/
 
+# 本地规范文档（不入库）
+docs/
+
 # 编辑器/系统
 .DS_Store
 
