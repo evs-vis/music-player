@@ -24,6 +24,7 @@ coverage
 *.sln
 *.sw?
 
+
 *.tsbuildinfo
 
 .eslintcache
@@ -37,3 +38,8 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# 构建分析产物（rollup-plugin-visualizer 每次 build 生成）
+stats.html
+stats-*.html
+
