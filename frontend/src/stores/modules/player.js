@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import request from '@/utils/request'
+import { formatTime } from '@/utils/format'
 
 export const usePlayerStore = defineStore(
   'player',
@@ -37,13 +38,6 @@ export const usePlayerStore = defineStore(
 
     const currentTimeFormatted = computed(() => formatTime(currentTime.value))
     const durationFormatted = computed(() => formatTime(duration.value))
-
-    function formatTime(seconds) {
-      if (!isFinite(seconds) || seconds < 0) return '0:00'
-      const mins = Math.floor(seconds / 60)
-      const secs = Math.floor(seconds % 60)
-      return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
 
     // ===== actions =====
 
