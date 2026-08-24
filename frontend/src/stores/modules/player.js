@@ -222,6 +222,72 @@ export const usePlayerStore = defineStore(
       isPlaying.value = false
     }
 
+    // ===== 播放器快照（localStorage）=====
+    // 登录/登出、注销、App.vue 节流保存共用。此前这份逻辑散在 App.vue 与 auth store 三处
+    //（且 auth 越界管了播放器），现收口到 player store：key 命名、序列化/恢复集中在此。
+    // 仅保存列表与进度，不保存音量/播放模式（volume/playMode 已由 persist 单独持久化）。
+
+    // key 命名：登录用户按 uid 分账，未登录存 guest
+    const stateKey = (uid) => (uid ? `playerState_user_${uid}` : 'playerState_guest')
+
+    // 保存当前播放状态快照（登出前 / App.vue 节流定时保存）
+    function savePlayerSnapshot(uid) {
+      try {
+        const state = {
+          playlist: playlist.value,
+          currentIndex: currentIndex.value,
+          currentTime: currentTime.value,
+          isPlaying: isPlaying.value
+        }
+        localStorage.setItem(stateKey(uid), JSON.stringify(state))
+      } catch {
+        // 快照保存失败不影响主流程
+      }
+    }
+
+    // 从快照恢复播放器状态（登录成功后调用）。
+    // 只恢复列表与进度；isPlaying 置为 false 并通过 resumeOnGesture 交给用户交互续播，
+    // 避开浏览器自动播放限制。
+    function restorePlayerSnapshot(uid) {
+      try {
+        const raw = localStorage.getItem(stateKey(uid))
+        if (!raw) return
+        const playerState = JSON.parse(raw)
+        playlist.value = Array.isArray(playerState.playlist) ? [...playerState.playlist] : []
+        currentIndex.value = Number.isFinite(playerState.currentIndex)
+          ? playerState.currentIndex
+          : -1
+        currentSong.value = playlist.value[currentIndex.value]
+          ? { ...playlist.value[currentIndex.value] }
+          : null
+
+        const restoredTime =
+          typeof playerState.currentTime === 'number' ? playerState.currentTime : 0
+        currentTime.value = restoredTime
+        if (restoredTime > 0) {
+          seekTime.value = restoredTime
+        }
+
+        if (playerState.isPlaying) {
+          setPlaying(false)
+          setResumeOnGesture(true)
+        } else {
+          isPlaying.value = !!playerState.isPlaying
+        }
+      } catch {
+        // 恢复失败静默处理：保持空播放器
+      }
+    }
+
+    // 清除某用户的播放器快照（注销账号时）
+    function removePlayerSnapshot(uid) {
+      try {
+        localStorage.removeItem(stateKey(uid))
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       currentSong,
       playlist,
@@ -258,7 +324,10 @@ export const usePlayerStore = defineStore(
       setVolume,
       changeMode,
       removeFromPlaylist,
-      clearPlaylist
+      clearPlaylist,
+      savePlayerSnapshot,
+      restorePlayerSnapshot,
+      removePlayerSnapshot
     }
   },
   {

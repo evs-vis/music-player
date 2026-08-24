@@ -90,38 +90,9 @@ export const useAuthStore = defineStore(
           avatar: u.avatar || null
         }
 
-        // 4. 登录成功后恢复播放器状态
+        // 4. 登录成功后恢复播放器状态（快照逻辑在 player store 内收口）
         try {
-          const player = usePlayerStore()
-          const uid = user.value?.id
-          const key = uid ? `playerState_user_${uid}` : 'playerState_guest'
-          const raw = localStorage.getItem(key)
-
-          if (raw) {
-            const playerState = JSON.parse(raw)
-            player.playlist = Array.isArray(playerState.playlist) ? [...playerState.playlist] : []
-            player.currentIndex = Number.isFinite(playerState.currentIndex)
-              ? playerState.currentIndex
-              : -1
-            player.currentSong = player.playlist[player.currentIndex]
-              ? { ...player.playlist[player.currentIndex] }
-              : null
-
-            const restoredTime =
-              typeof playerState.currentTime === 'number' ? playerState.currentTime : 0
-            player.currentTime = restoredTime
-
-            if (restoredTime > 0) {
-              player.seekTime = restoredTime
-            }
-
-            if (playerState.isPlaying) {
-              player.setPlaying(false)
-              if (player.setResumeOnGesture) player.setResumeOnGesture(true)
-            } else {
-              player.isPlaying = !!playerState.isPlaying
-            }
-          }
+          usePlayerStore().restorePlayerSnapshot(user.value?.id)
         } catch {
           // 播放器恢复失败不影响登录流程
         }
@@ -173,18 +144,9 @@ export const useAuthStore = defineStore(
 
     // 登出
     function logout() {
-      // 1. 保存当前播放状态到 localStorage
+      // 1. 保存当前播放状态到 localStorage（uid 需在清空登录态前取）
       try {
-        const player = usePlayerStore()
-        const uid = user.value?.id
-        const key = uid ? `playerState_user_${uid}` : 'playerState_guest'
-        const state = {
-          playlist: player.playlist,
-          currentIndex: player.currentIndex,
-          currentTime: player.currentTime,
-          isPlaying: player.isPlaying
-        }
-        localStorage.setItem(key, JSON.stringify(state))
+        usePlayerStore().savePlayerSnapshot(user.value?.id)
       } catch {
         // ignore
       }
@@ -208,8 +170,9 @@ export const useAuthStore = defineStore(
       const uid = user.value?.id
       await deleteAccountService()
       logout()
+      // 注销后清除该用户残留的播放器快照
       try {
-        if (uid) localStorage.removeItem(`playerState_user_${uid}`)
+        if (uid) usePlayerStore().removePlayerSnapshot(uid)
       } catch {
         // ignore
       }

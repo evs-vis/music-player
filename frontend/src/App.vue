@@ -12,22 +12,6 @@ const errorRetryKey = ref(0)
 let lastPlaybackKey = ''
 let saveTimer = null
 const authStore = useAuthStore()
-const saveToLocal = () => {
-  try {
-    const uid = authStore.user?.id
-    const key = uid ? `playerState_user_${uid}` : 'playerState_guest'
-    const state = {
-      playlist: playerStore.playlist,
-      currentIndex: playerStore.currentIndex,
-      currentTime: playerStore.currentTime,
-      isPlaying: playerStore.isPlaying
-    }
-    localStorage.setItem(key, JSON.stringify(state))
-  } catch (e) {
-    // ignore
-    console.error(e)
-  }
-}
 
 const syncPlayback = async (song) => {
   if (!song) {
@@ -63,7 +47,7 @@ watch(
 // 需保留 deep 监听；高频 currentTime（约 4 次/秒）走浅监听，避免每次更新深遍历整个 playlist 对象树
 const scheduleSave = () => {
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(saveToLocal, 2000)
+  saveTimer = setTimeout(() => playerStore.savePlayerSnapshot(authStore.user?.id), 2000)
 }
 
 watch(() => playerStore.playlist, scheduleSave, { deep: true })
