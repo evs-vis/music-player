@@ -53,7 +53,6 @@ const handleLogin = () => {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(0.75rem);
   -webkit-backdrop-filter: blur(0.75rem);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 
   .left {
     display: flex;

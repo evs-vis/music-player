@@ -61,9 +61,9 @@ const goPlayPage = () => {
 <style lang="scss" scoped>
 .mini-player {
   position: fixed;
-  bottom: calc($tabbar-height + $sm + $safe-area-inset-bottom);
-  left: $safe-margin;
-  right: $safe-margin;
+  bottom: calc($tabbar-height + $safe-area-inset-bottom);
+  left: $sm;
+  right: $sm;
   z-index: 50;
   border-radius: $card-radius;
   padding: $sm;

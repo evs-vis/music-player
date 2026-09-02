@@ -6,8 +6,7 @@ const route = useRoute()
 // 是否显示底部导航栏：除歌单详情/播放/登录等二级页外均显示
 const showTabbar = computed(() => route.meta.showTabbar !== false)
 
-// Tab 切换时滚动回顶部：tab 页均为独立路由组件（无 keep-alive），
-// 切换后新页面从顶部开始浏览，符合移动端 Tab 应用惯例
+// 切换后新页面从顶部开始浏览
 watch(
   () => route.path,
   () => {
@@ -43,5 +42,37 @@ watch(
 .content {
   flex: 1;
   padding-bottom: calc($tabbar-height + $mini-player-height + 8px + $safe-area-inset-bottom);
+}
+
+.van-tabbar {
+  border-radius: 1.5rem 1.5rem 0 0 !important;
+  backdrop-filter: blur(20px) !important;
+  background: rgba(221, 243, 231, 0.8) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1) !important;
+  height: 60px;
+}
+
+.van-tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+
+.van-tabbar-item--active {
+  background-color: rgba(213, 246, 228, 0.5);
+  color: rgb(39, 171, 105);
+}
+
+.van-tabbar-item__icon {
+  font-size: 24px !important;
+}
+.van-tabbar-item__text {
+  font-size: 12px !important;
 }
 </style>

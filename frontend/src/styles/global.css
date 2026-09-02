@@ -1,42 +1,56 @@
-/* ===== 全局基础样式 ===== */
+/* ===== 首屏骨架屏样式（仅框架，尺寸与真实页面一致） ===== */
 
-/* 容器占满视口，避免骨架屏→真实内容切换时高度塌陷产生布局偏移（CLS） */
-#app {
-  min-height: 100vh;
-}
-
-/* 提升 tabbar 文字对比度（默认 #7d7e80 在白底上仅约 3.6:1，不足 4.5:1） */
-:root {
-  --van-tabbar-item-text-color: #5c5e66;
-  --van-tabbar-item-active-color: #006d37;
-}
-
-/* 首屏骨架（index.html 内联节点）：JS/接口就绪前先渲染静态内容，降低 FCP/LCP */
 .app-shell {
   min-height: 100vh;
-  padding: 16px 12px;
+  padding: 18px 22px;
   box-sizing: border-box;
   background: linear-gradient(135deg, #d5f1e4 0%, #f5f9f7 100%);
-  color: #1a2b22;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.app-shell-title{
+  margin-top:22px;
+  margin-bottom:18px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.1);
+
+}
+/* 顶部栏框架 */
+.app-shell-header {
+  height: 56px;
+  margin: 1px -16px 16px;
+  /* 抵消外层 padding，通栏 */
+  background: rgba(255, 255, 255, 0.1);
 }
 
+/* 区块容器 */
 .app-shell-section {
-  margin-bottom: 20px;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 36px;
+  overflow-x: hidden;
 }
 
-/* 骨架占位块：与真实内容的首页卡片/歌曲行同尺寸，数据就绪后原位替换，避免 CLS */
+/* 歌单卡片框架*/
 .app-shell-card {
+  flex-shrink: 0;
   width: 176px;
   height: 224px;
-  margin-right: 12px;
   border-radius: 16px;
   background: linear-gradient(145deg, rgba(39, 174, 96, 0.18), rgba(39, 174, 96, 0.06));
 }
 
-.app-shell-row {
-  height: 56px;
-  margin-bottom: 8px;
-  border-radius: 12px;
-  background: rgba(39, 174, 96, 0.1);
+/* 热门歌曲列表框架 */
+.app-shell-section:last-child {
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 歌曲列表项框架*/
+.app-shell-list-item {
+  height: 72px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(1.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }

@@ -12,7 +12,7 @@ const router = useRouter()
 const playerStore = usePlayerStore()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
-// ✅ 是否显示迷你播放器（有当前歌曲即显示）
+// 是否显示迷你播放器（有当前歌曲即显示）
 const showMiniPlayer = computed(() => playerStore.currentSong !== null)
 
 const playlists = ref([])
@@ -21,8 +21,11 @@ const loading = ref(true)
 // 正在切换收藏的歌曲 id：切换完成前禁用该行收藏按钮，防连点对非幂等 toggle 接口造成状态错乱
 const favPendingId = ref(null)
 
+const isFav = (id) => favoritesStore.isFavorite(id)
+
 const fetchData = async () => {
-  // 歌单与歌曲两个接口并行、失败互相隔离：一个失败不拖累另一个，部分数据也能展示
+  loading.value = true
+  // 歌单与歌曲两个接口并行、失败互相隔离：
   const tasks = [
     getPlaylistsService()
       .then((res) => {
@@ -68,8 +71,6 @@ const toggleFav = async (songId) => {
   }
 }
 
-const isFav = (id) => favoritesStore.isFavorite(id)
-
 onMounted(() => {
   fetchData()
   favoritesStore.loadFavorites()
@@ -81,32 +82,33 @@ onMounted(() => {
     <app-header></app-header>
 
     <!-- 推荐歌单 -->
-    <!-- 加载期间只显示卡片骨架（v-if="!loading" 连标题一起隐藏），数据就绪后标题与内容同帧渲染 -->
-    <section v-if="!loading" class="section">
+    <section class="section">
       <h2 class="section-title">推荐歌单</h2>
       <div class="scroll-container no-scrollbar">
         <!-- 歌单卡骨架占位：数据未到时撑住 176x224 卡片高度，避免渲染时布局偏移 -->
         <template v-if="loading">
-          <div v-for="i in 3" :key="'skc' + i" class="playlist-card playlist-skeleton"></div>
+          <div v-for="i in 2" :key="'skc' + i" class="playlist-card playlist-skeleton"></div>
         </template>
-        <div
-          v-for="pl in playlists"
-          :key="pl.id"
-          class="playlist-card glass-card"
-          @click="goPlaylistDetail(pl.id)"
-        >
+        <template v-else>
           <div
-            class="card-bg"
-            :style="{ backgroundImage: `url(${pl.coverMedium || mediumUrl(pl.cover)})` }"
-          />
-          <div class="card-overlay" />
-          <span class="card-name">{{ pl.name }}</span>
-        </div>
+            v-for="pl in playlists"
+            :key="pl.id"
+            class="playlist-card glass-card"
+            @click="goPlaylistDetail(pl.id)"
+          >
+            <div
+              class="card-bg"
+              :style="{ backgroundImage: `url(${pl.coverMedium || mediumUrl(pl.cover)})` }"
+            />
+            <div class="card-overlay" />
+            <span class="card-name">{{ pl.name }}</span>
+          </div>
+        </template>
       </div>
     </section>
 
     <!-- 热门歌曲 -->
-    <section v-if="!loading" class="section">
+    <section class="section">
       <div class="section-header">
         <h2 class="section-title">热门歌曲</h2>
         <span class="more-btn" @click="router.push('/search')">查看更多</span>
@@ -122,40 +124,42 @@ onMounted(() => {
             </div>
           </div>
         </template>
-        <div
-          v-for="(song, idx) in hotSongs"
-          :key="song.id"
-          class="song-item glass-card"
-          @click="playSong(song, idx)"
-        >
-          <van-image
-            :src="song.coverThumb || thumbUrl(song.cover)"
-            width="56"
-            height="56"
-            radius="8"
-            fit="cover"
-            class="song-cover"
-            :loading="idx < 3 ? 'eager' : 'lazy'"
-            :fetchpriority="idx < 3 ? 'high' : 'auto'"
-            :alt="'封面：' + song.title"
-          />
-          <div class="song-info">
-            <div class="song-title">{{ song.title }}</div>
-            <div class="song-artist">{{ song.artist }}</div>
-          </div>
-          <button
-            class="fav-btn"
-            @click.stop="toggleFav(song.id)"
-            :aria-label="isFav(song.id) ? '取消收藏' : '收藏'"
-            :disabled="favPendingId === song.id"
+        <template v-else>
+          <div
+            v-for="(song, idx) in hotSongs"
+            :key="song.id"
+            class="song-item glass-card"
+            @click="playSong(song, idx)"
           >
-            <van-icon
-              :name="isFav(song.id) ? 'like' : 'like-o'"
-              :color="isFav(song.id) ? '#E74C3C' : '#BCCABC'"
-              size="20"
+            <van-image
+              :src="song.coverThumb || thumbUrl(song.cover)"
+              width="56"
+              height="56"
+              radius="8"
+              fit="cover"
+              class="song-cover"
+              :loading="idx < 3 ? 'eager' : 'lazy'"
+              :fetchpriority="idx < 3 ? 'high' : 'auto'"
+              :alt="'封面：' + song.title"
             />
-          </button>
-        </div>
+            <div class="song-info">
+              <div class="song-title">{{ song.title }}</div>
+              <div class="song-artist">{{ song.artist }}</div>
+            </div>
+            <button
+              class="fav-btn"
+              @click.stop="toggleFav(song.id)"
+              :aria-label="isFav(song.id) ? '取消收藏' : '收藏'"
+              :disabled="favPendingId === song.id"
+            >
+              <van-icon
+                :name="isFav(song.id) ? 'like' : 'like-o'"
+                :color="isFav(song.id) ? '#E74C3C' : '#BCCABC'"
+                size="20"
+              />
+            </button>
+          </div>
+        </template>
       </div>
     </section>
 
@@ -202,7 +206,6 @@ onMounted(() => {
   gap: $md;
   overflow-x: auto;
   padding-bottom: $sm;
-  -webkit-overflow-scrolling: touch;
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -232,6 +235,8 @@ onMounted(() => {
 
 /* 歌单卡骨架占位：撑住 176x224 高度，数据到达时原位替换，避免 CLS */
 .playlist-skeleton {
+  display: flex;
+  // width: 100%;
   background: linear-gradient(145deg, rgba(39, 174, 96, 0.14), rgba(39, 174, 96, 0.05));
 }
 

@@ -10,23 +10,31 @@
     <title>Music Player - 在线音乐播放器</title>
   </head>
   <body>
-    <div id="app">
-      <!-- 首屏骨架：渲染静态内容，不等 JS/接口，降低 FCP/LCP 等待 -->
-      <div class="app-shell">
-        <!-- 骨架不渲染头部（logo + Music Player 标题）与区块标题，由 AppHeader / HomePage 在挂载时一次性渲染，
-             避免刷新时骨架占位与真实内容替换造成闪烁 -->
-        <div class="app-shell-section">
-          <div class="app-shell-card"></div>
-          <div class="app-shell-card"></div>
-          <div class="app-shell-card"></div>
-        </div>
-        <div class="app-shell-section">
-          <div class="app-shell-row"></div>
-          <div class="app-shell-row"></div>
-          <div class="app-shell-row"></div>
-        </div>
+  <div id="app">
+    <!-- 首屏骨架：仅整体框架，不显示细节，尺寸与真实页面一致 -->
+    <div class="app-shell">
+      <!-- 顶部栏占位 -->
+      <div class="app-shell-header"></div>
+  
+      <div class="app-shell-title"></div>
+      <!-- 推荐歌单占位：横向卡片 -->
+      <div class="app-shell-section">
+        <div class="app-shell-card"></div>
+        <div class="app-shell-card"></div>
+        <div class="app-shell-card"></div>
+      </div>
+      <div class="app-shell-title"></div>
+      <!-- 热门歌曲占位：纵向列表 -->
+      <div class="app-shell-section">
+        <div class="app-shell-list-item"></div>
+        <div class="app-shell-list-item"></div>
+        <div class="app-shell-list-item"></div>
+        <div class="app-shell-list-item"></div>
+        <div class="app-shell-list-item"></div>
+        <div class="app-shell-list-item"></div>
       </div>
     </div>
+  </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
