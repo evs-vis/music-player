@@ -46,8 +46,7 @@ watch(
 
 .van-tabbar {
   border-radius: 1.5rem 1.5rem 0 0 !important;
-  backdrop-filter: blur(20px) !important;
-  background: rgba(221, 243, 231, 0.8) !important;
+  background: rgb(221, 243, 231) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1) !important;
   height: 60px;

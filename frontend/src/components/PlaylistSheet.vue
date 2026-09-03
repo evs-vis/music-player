@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue'
 import { usePlayerStore } from '@/stores'
-import { showToast } from 'vant'
 import { thumbUrl } from '@/utils/image'
 
 const props = defineProps({
@@ -32,10 +31,6 @@ const playSongAt = (index) => {
 
 // 移除歌曲
 const removeSong = (index) => {
-  if (playlist.value.length <= 1) {
-    showToast({ type: 'warning', message: '播放列表至少保留一首歌曲' })
-    return
-  }
   playerStore.removeFromPlaylist(index)
 }
 
@@ -44,17 +39,6 @@ const clearAll = () => {
   playerStore.clearPlaylist()
   sheetVisible.value = false
 }
-
-// 总时长格式化
-const totalDuration = computed(() => {
-  const total = playlist.value.reduce((sum, song) => sum + (song.duration || 240), 0)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  if (hours > 0) {
-    return `${hours} 小时 ${minutes} 分钟`
-  }
-  return `${minutes} 分钟`
-})
 </script>
 
 <template>
@@ -77,7 +61,7 @@ const totalDuration = computed(() => {
       <div class="sheet-header">
         <div class="header-info">
           <h2 class="header-title">当前播放列表</h2>
-          <p class="header-meta">{{ playlist.length }} 首歌曲 · 共 {{ totalDuration }}</p>
+          <p class="header-meta">{{ playlist.length }} 首歌曲</p>
         </div>
         <button class="clear-btn" @click="clearAll" v-if="playlist.length > 0">清空</button>
       </div>

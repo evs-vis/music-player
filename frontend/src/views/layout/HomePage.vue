@@ -50,7 +50,7 @@ const goPlaylistDetail = (id) => {
   router.push({ name: 'PlaylistDetail', params: { category: id } })
 }
 
-const playSong = (song) => {
+const playSong = (song, hotSongs) => {
   playerStore.playSong(song, hotSongs.value)
 }
 
@@ -79,13 +79,13 @@ onMounted(() => {
 
 <template>
   <div class="home-page">
-    <app-header></app-header>
+    <app-header />
 
     <!-- 推荐歌单 -->
     <section class="section">
       <h2 class="section-title">推荐歌单</h2>
       <div class="scroll-container no-scrollbar">
-        <!-- 歌单卡骨架占位：数据未到时撑住 176x224 卡片高度，避免渲染时布局偏移 -->
+        <!-- 歌单卡骨架占位 -->
         <template v-if="loading">
           <div v-for="i in 2" :key="'skc' + i" class="playlist-card playlist-skeleton"></div>
         </template>
@@ -114,7 +114,7 @@ onMounted(() => {
         <span class="more-btn" @click="router.push('/search')">查看更多</span>
       </div>
       <div class="song-list">
-        <!-- 数据未到前的骨架行：与真实行同高，避免数据到达撑开列表产生布局偏移（CLS） -->
+        <!-- 未到前的骨架 -->
         <template v-if="loading">
           <div v-for="i in 6" :key="'sk' + i" class="song-item song-skeleton">
             <div class="skeleton-cover"></div>
@@ -236,7 +236,6 @@ onMounted(() => {
 /* 歌单卡骨架占位：撑住 176x224 高度，数据到达时原位替换，避免 CLS */
 .playlist-skeleton {
   display: flex;
-  // width: 100%;
   background: linear-gradient(145deg, rgba(39, 174, 96, 0.14), rgba(39, 174, 96, 0.05));
 }
 
@@ -284,7 +283,7 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-/* 热门歌曲骨架行：与真实行同高（72px = 图片56 + padding上下各8），防止数据到达时撑开列表（CLS） */
+/* 热门歌曲骨架行 */
 .song-skeleton {
   min-height: 72px;
   pointer-events: none;

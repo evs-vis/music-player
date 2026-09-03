@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore, useAuthStore, useFavoritesStore } from '@/stores'
 import { showToast } from 'vant'
-import PlaylistSheet from '@/components/PlaylistSheet.vue'
 
 const router = useRouter()
 const playerStore = usePlayerStore()
@@ -16,10 +15,10 @@ const modeConfig = {
   one: { icon: 'replay', color: '#e74c3c' },
   shuffle: { icon: 'exchange', color: '#f39c12' }
 }
-// ✅ 是否显示歌词模式
+// 是否显示歌词模式
 const showLyrics = ref(false)
 
-// ✅ 点击封面区域切换
+// 点击封面区域切换模式
 const toggleLyrics = () => {
   showLyrics.value = !showLyrics.value
 }
@@ -41,7 +40,7 @@ const isFav = computed(() =>
   currentSong.value ? favoritesStore.isFavorite(currentSong.value.id) : false
 )
 
-// 歌词处理：增量探测（#22）
+// 歌词处理：增量探测
 // 歌词按 time 升序，timeupdate 每次只前进 0~1 行，从上次索引往后探测平均 O(1)，
 // 避免每次从尾部全量线性扫描；seek/切歌回退时再从 0 重新定位。
 const currentLyricIndex = ref(-1)
@@ -89,7 +88,7 @@ const startSeek = (event) => {
   playerStore.currentTime = seekRatio(event)
 }
 
-// 拖动中：只更新预览，由 isDragging 抑制 timeupdate 写回（#10）
+// 拖动中：只更新预览，由 isDragging 抑制 timeupdate 写回
 const dragSeek = (event) => {
   if (!playerStore.isDragging) return
   playerStore.currentTime = seekRatio(event)
@@ -148,14 +147,14 @@ watch(
   { immediate: true }
 )
 
-// ✅ 歌词索引变化 / 唱片·歌词模式切换时，让当前行平滑滚动居中
+// 歌词索引变化 / 唱片·歌词模式切换时，让当前行平滑滚动居中
 function scrollActiveLyricLine() {
   const container = showLyrics.value ? lyricsFullRef.value : lyricsMiniRef.value
   if (container) scrollToLine(container)
 }
 watch([currentLyricIndex, showLyrics], () => nextTick(scrollActiveLyricLine))
 
-// ✅ 切换歌曲时重置滚动位置并居中当前行
+// 切换歌曲时重置滚动位置并居中当前行
 watch(
   () => playerStore.currentSong?.id,
   () => {
@@ -171,7 +170,7 @@ watch(
   }
 )
 
-// ✅ 歌词滚动动画（按容器独立管理，切换模式/快速跳转时不会互相打架）
+// 歌词滚动动画（按容器独立管理，切换模式/快速跳转时不会互相打架）
 // 用 Map（可迭代）而非 WeakMap：key 恒为两个固定 ref，且卸载时需要遍历清理动画帧
 const scrollAnimFrames = new Map()
 
@@ -182,7 +181,7 @@ function scrollToLine(container) {
   const containerRect = container.getBoundingClientRect()
   const lineRect = activeLine.getBoundingClientRect()
 
-  // ✅ 基于容器相对位置计算目标，不受 offsetParent 影响，居中更准确
+  //基于容器相对位置计算目标，不受 offsetParent 影响，居中更准确
   const targetTop =
     container.scrollTop +
     lineRect.top -
@@ -260,7 +259,7 @@ onUnmounted(() => {
 
     <!-- 歌曲信息与封面 -->
     <main class="play-main" @click="toggleLyrics">
-      <!-- ✅ 唱片模式 -->
+      <!-- 唱片模式 -->
       <template v-if="!showLyrics">
         <div class="album-art-wrapper" :class="{ 'is-paused': !playerStore.isPlaying }">
           <div class="album-art">
@@ -303,7 +302,7 @@ onUnmounted(() => {
         </div>
       </template>
 
-      <!-- ✅ 歌词模式（铺满） -->
+      <!-- 歌词模式（铺满） -->
       <div v-else class="lyrics-full" ref="lyricsFullRef">
         <template v-if="currentSong.lyrics?.length">
           <p
@@ -404,7 +403,7 @@ onUnmounted(() => {
     </footer>
 
     <!-- 播放列表弹层 -->
-    <PlaylistSheet v-model:show="showPlaylistSheet" />
+    <playlist-sheet v-model:show="showPlaylistSheet" />
   </div>
 </template>
 
