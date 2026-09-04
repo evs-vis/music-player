@@ -12,6 +12,7 @@ export function useAudio() {
   let playSeq = 0 // 递增播放序号，防止快速切歌时旧 promise 覆盖新歌（#11）
   let pendingSeek = null // metadata 未就绪时的待执行 seek（#18）
   let lastErrorToastAt = 0 // 音频错误 toast 节流，防快速切歌连弹
+  let isLoading = false
   const handlers = {}
 
   function initAudio() {
@@ -24,7 +25,7 @@ export function useAudio() {
     el.preload = 'metadata'
 
     handlers.timeupdate = () => {
-      // 拖动进度条中：抑制写回，避免播放头被旧值拉回（#10）
+      // 拖动进度条中：抑制写回，避免播放头被旧值拉回
       if (playerStore.isDragging) return
       if (!isInternalUpdate) {
         isInternalUpdate = true
@@ -43,7 +44,7 @@ export function useAudio() {
     }
 
     // 缓冲 loading：waiting/stalled/loadstart 置真（仅播放意图时，暂停时不显示），
-    // canplay/playing 置假。与 #11 playSeq / #12 isPlaying 语义独立，只驱动 UI。
+    // canplay/playing 置假。
     handlers.loadstart = () => {
       if (playerStore.isPlaying) playerStore.setBuffering(true)
     }
@@ -73,7 +74,7 @@ export function useAudio() {
 
     handlers.pause = () => {
       // 切歌时 loadAndPlay 会内部 pause 旧歌，此时 store.isPlaying 为 true（切歌意图），
-      // 不应被 pause 事件拉回 false，否则切歌后图标闪烁/状态错乱（#12）
+      // 不应被 pause 事件拉回 false，否则切歌后图标闪烁/状态错乱
       if (playerStore.isPlaying) return
       if (!isInternalUpdate) {
         isInternalUpdate = true
@@ -121,42 +122,51 @@ export function useAudio() {
 
   async function loadAndPlay(song) {
     if (!song?.url) return
-
+    if (isLoading) {
+      return
+    }
     initAudio()
     const el = audio.value
     const baseURL = import.meta.env.VITE_API_BASE_URL || ''
     const nextSrc = `${baseURL}${song.url}`
     const songKey = `${song.id || song.url}:${song.url}`
     const seq = ++playSeq // 本次播放序号
-
-    if (currentSongKey !== songKey) {
-      currentSongKey = songKey
-      el.pause()
-      if (el.src !== nextSrc) {
-        // 换歌后清除旧歌的待执行 seek，避免新歌被 seek 到旧位置（#18）
-        pendingSeek = null
-        el.src = nextSrc
-      }
-    }
+    isLoading = true
 
     try {
-      if (!el.paused) return
+      if (currentSongKey !== songKey) {
+        currentSongKey = songKey
+        el.pause()
+        if (el.src !== nextSrc) {
+          pendingSeek = null
+          el.src = nextSrc
+        }
+      }
+
+      if (!el.paused) {
+        isLoading = false // 已经暂停的情况下，释放锁再返回
+        return
+      }
+
       await el.play()
 
-      // 快速切歌竞态防护：await 挂起期间若已切到新歌，忽略本次的收尾操作（#11）
-      if (seq !== playSeq) return
+      // 快速切歌竞态防护：await 挂起期间若已切到新歌，忽略本次的收尾操作
+      if (seq !== playSeq) {
+        isLoading = false
+        return
+      }
 
       if (authStore.isLoggedIn && song.id) {
         const historyStore = useHistoryStore()
-        // 传完整 song：store 内做本地去重置顶，不再触发整表 GET
         historyStore.addToHistory(song).catch(() => {})
       }
     } catch {
-      // 仅当仍是最新请求时才认为播放被阻止，避免旧请求误把新歌状态改掉
       if (seq === playSeq) {
         console.log('自动播放被阻止，需用户交互')
         playerStore.setPlaying(false)
       }
+    } finally {
+      isLoading = false
     }
   }
 
@@ -169,6 +179,7 @@ export function useAudio() {
   async function retryPlayback() {
     const song = playerStore.currentSong
     if (!song?.url) return
+    isLoading = false
     currentSongKey = null // 强制 loadAndPlay 重新赋值 src → 触发重新加载
     await loadAndPlay(song)
   }
@@ -187,7 +198,7 @@ export function useAudio() {
     if (!audio.value || !isFinite(time)) return
     const el = audio.value
     // metadata 未就绪（readyState < 1）时浏览器忽略 currentTime 赋值，
-    // 缓存到 loadedmetadata 后执行（#18）
+    // 缓存到 loadedmetadata 后执行
     if (el.readyState < 1 && el.src) {
       pendingSeek = time
       return

@@ -33,15 +33,36 @@ const syncPlayback = async (song) => {
     pause()
   }
 }
-
 watch(
-  () => playerStore.currentSong,
-  async (song) => {
-    await syncPlayback(song)
+  () => ({
+    song: playerStore.currentSong,
+    playing: playerStore.isPlaying
+  }),
+  async ({ song, playing }) => {
+    // 无歌曲时直接暂停
+    if (!song) {
+      pause()
+      lastPlaybackKey = ''
+      return
+    }
+
+    const playbackKey = `${song.id || song.url}:${song.url}`
+
+    if (playing) {
+      // 需要播放：判断是否是新歌
+      if (lastPlaybackKey !== playbackKey) {
+        lastPlaybackKey = playbackKey
+        await loadAndPlay(song)
+      } else {
+        await play()
+      }
+    } else {
+      // 暂停
+      pause()
+    }
   },
   { immediate: true }
 )
-
 // 保存播放器状态到 localStorage（节流，2s）
 // 拆成两个 watch：playlist 可能 push/splice 而不改 currentIndex（addToPlaylist），
 // 需保留 deep 监听；高频 currentTime（约 4 次/秒）走浅监听，避免每次更新深遍历整个 playlist 对象树
@@ -54,19 +75,6 @@ watch(() => playerStore.playlist, scheduleSave, { deep: true })
 watch(
   () => [playerStore.currentIndex, playerStore.currentTime, playerStore.isPlaying],
   scheduleSave
-)
-
-watch(
-  () => playerStore.isPlaying,
-  async (isPlaying, prevIsPlaying) => {
-    if (!playerStore.currentSong) return
-
-    if (isPlaying && !prevIsPlaying) {
-      await syncPlayback(playerStore.currentSong)
-    } else if (!isPlaying && prevIsPlaying) {
-      pause()
-    }
-  }
 )
 
 watch(

@@ -56,8 +56,11 @@ export const usePlayerStore = defineStore(
       }
     }
 
-    // 切换当前歌曲：同步重置进度/时长，避免新歌进度条从旧时间点起跳（#15）
+    // 切换当前歌曲：同步重置进度/时长，避免新歌进度条从旧时间点起跳
     function setCurrentSong(song) {
+      if (currentSong.value && song && currentSong.value.id === song.id) {
+        return
+      }
       currentSong.value = song ? { ...song } : null
       currentTime.value = 0
       duration.value = 0
@@ -149,9 +152,10 @@ export const usePlayerStore = defineStore(
 
     function playNext() {
       if (playlist.value.length === 0) return
-      // currentIndex 非法时从第 0 首开始（#17）
+      // currentIndex 非法时从第 0 首开始
       if (playlist.value.length === 1) {
-        seekTo(0) // 从 0 开始播放（如果你想要重播）
+        console.log('🎵 单曲模式，走 seekTo(0)，不触发 loadAndPlay')
+        seekTo(0) // 从 0 开始播放
         return
       }
       if (currentIndex.value < 0) currentIndex.value = 0
