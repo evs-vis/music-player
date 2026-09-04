@@ -40,33 +40,57 @@ const isFav = computed(() =>
   currentSong.value ? favoritesStore.isFavorite(currentSong.value.id) : false
 )
 
-// 歌词处理：增量探测
-// 歌词按 time 升序，timeupdate 每次只前进 0~1 行，从上次索引往后探测平均 O(1)，
-// 避免每次从尾部全量线性扫描；seek/切歌回退时再从 0 重新定位。
+// 歌词处理
 const currentLyricIndex = ref(-1)
+// =================== 歌词二分查找（重构版） ===================
+// 1. 纯二分查找函数：返回 lyrics 中最后一个 time <= 当前播放时间的索引
+function binarySearchLyricIndex(lyrics, time) {
+  if (!lyrics || lyrics.length === 0) return -1
+
+  // 边界处理：如果时间早于第一句，高亮第一句（与旧逻辑保持一致）
+  if (time < lyrics[0].time) return 0
+  // 边界处理：如果时间晚于最后一句，高亮最后一句
+  if (time >= lyrics[lyrics.length - 1].time) return lyrics.length - 1
+
+  let left = 0
+  let right = lyrics.length - 1
+  let ans = 0
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2)
+    // 核心：当中间句的时间 <= 当前播放时间，说明这一句以及它之前的所有句子都“已过时”，记录 ans 并向右找更晚的
+    if (lyrics[mid].time <= time) {
+      ans = mid
+      left = mid + 1
+    } else {
+      // 否则，当前中间句时间太靠后了，向左找
+      right = mid - 1
+    }
+  }
+  return ans
+}
+
+// 2. 极简更新函数（删掉了全部 while 循环和游标依赖）
 function updateLyricIndex() {
   const lyrics = currentSong.value?.lyrics
   if (!lyrics || lyrics.length === 0) {
     currentLyricIndex.value = -1
     return
   }
-  const time = playerStore.currentTime
-  let idx = currentLyricIndex.value
-  if (idx < 0) idx = 0
-  // 常规推进：time >= 下一行时间则继续后移
-  while (idx + 1 < lyrics.length && time >= lyrics[idx + 1].time) idx++
-  // 回退（seek/切歌）：当前行时间已超过播放位置，从 0 重定位
-  while (idx > 0 && time < lyrics[idx].time) idx--
-  if (time < lyrics[0].time) idx = 0
-  currentLyricIndex.value = idx
+  // 一行定位，天下太平
+  currentLyricIndex.value = binarySearchLyricIndex(lyrics, playerStore.currentTime)
 }
-// 播放时间变化时增量更新；切歌时重置索引
+
+// 3. 监听播放时间变化（无论正常播放还是拖拽 Seek，均触发更新）
 watch(() => playerStore.currentTime, updateLyricIndex)
+
+// 4. 监听切歌（注意：删掉了原来的重置为 0 的逻辑，因为二分查找不依赖旧索引）
 watch(
   () => playerStore.currentSong?.id,
   () => {
-    currentLyricIndex.value = 0
+    // 切歌时直接更新索引；由于 currentTime 可能为 0 或上次残留值，二分查找都能精准适配
     updateLyricIndex()
+    // 注意：滚动到当前行由下面的 watch([currentLyricIndex, showLyrics]) 自动触发，无需手动干预
   },
   { immediate: true }
 )

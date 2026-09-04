@@ -50,7 +50,7 @@ const goPlaylistDetail = (id) => {
   router.push({ name: 'PlaylistDetail', params: { category: id } })
 }
 
-const playSong = (song, hotSongs) => {
+const playSong = (song) => {
   playerStore.playSong(song, hotSongs.value)
 }
 

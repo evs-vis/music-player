@@ -150,6 +150,10 @@ export const usePlayerStore = defineStore(
     function playNext() {
       if (playlist.value.length === 0) return
       // currentIndex 非法时从第 0 首开始（#17）
+      if (playlist.value.length === 1) {
+        seekTo(0) // 从 0 开始播放（如果你想要重播）
+        return
+      }
       if (currentIndex.value < 0) currentIndex.value = 0
       if (playMode.value === 'shuffle') {
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
@@ -162,12 +166,14 @@ export const usePlayerStore = defineStore(
 
     function playPrev() {
       if (playlist.value.length === 0) return
-      // currentIndex 非法时从第 0 首开始（#17）
-      if (currentIndex.value < 0) currentIndex.value = 0
-      if (currentTime.value > 3) {
-        seekTime.value = 0
+      // currentIndex 非法时从第 0 首开始
+      if (playlist.value.length === 1) {
+        if (currentTime.value > 3) {
+          seekTo(0) // 重置到开头
+        }
         return
       }
+      if (currentIndex.value < 0) currentIndex.value = 0
       if (playMode.value === 'shuffle') {
         currentIndex.value = Math.floor(Math.random() * playlist.value.length)
       } else {

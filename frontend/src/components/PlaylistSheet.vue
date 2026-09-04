@@ -70,7 +70,7 @@ const clearAll = () => {
       <div class="song-list" v-if="playlist.length > 0">
         <div
           v-for="(song, index) in playlist"
-          :key="song.id + '-' + index"
+          :key="song.id"
           class="song-item"
           :class="{ active: index === currentIndex }"
           @click="playSongAt(index)"
