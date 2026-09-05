@@ -42,12 +42,12 @@ const isFav = computed(() =>
 
 // 歌词处理
 const currentLyricIndex = ref(-1)
-// =================== 歌词二分查找（重构版） ===================
+// =================== 歌词二分查找 ===================
 // 1. 纯二分查找函数：返回 lyrics 中最后一个 time <= 当前播放时间的索引
 function binarySearchLyricIndex(lyrics, time) {
   if (!lyrics || lyrics.length === 0) return -1
 
-  // 边界处理：如果时间早于第一句，高亮第一句（与旧逻辑保持一致）
+  // 边界处理：如果时间早于第一句，高亮第一句
   if (time < lyrics[0].time) return 0
   // 边界处理：如果时间晚于最后一句，高亮最后一句
   if (time >= lyrics[lyrics.length - 1].time) return lyrics.length - 1
@@ -84,13 +84,13 @@ function updateLyricIndex() {
 // 3. 监听播放时间变化（无论正常播放还是拖拽 Seek，均触发更新）
 watch(() => playerStore.currentTime, updateLyricIndex)
 
-// 4. 监听切歌（注意：删掉了原来的重置为 0 的逻辑，因为二分查找不依赖旧索引）
+// 4. 监听切歌
 watch(
   () => playerStore.currentSong?.id,
   () => {
-    // 切歌时直接更新索引；由于 currentTime 可能为 0 或上次残留值，二分查找都能精准适配
+    // 切歌时直接更新索引
     updateLyricIndex()
-    // 注意：滚动到当前行由下面的 watch([currentLyricIndex, showLyrics]) 自动触发，无需手动干预
+    // 注意：滚动到当前行由下面的 watch([currentLyricIndex, showLyrics]) 自动触发
   },
   { immediate: true }
 )
@@ -252,7 +252,7 @@ onMounted(() => {
   favoritesStore.loadFavorites()
 })
 
-// 卸载时取消歌词滚动动画，避免 rAF 空转并持有已卸载容器引用（#20）
+// 卸载时取消歌词滚动动画，避免 rAF 空转并持有已卸载容器引用
 onUnmounted(() => {
   // Map 可迭代：遍历所有未完成的动画帧并取消，防止 rAF 空转持有已卸载容器
   scrollAnimFrames.forEach((frameId) => {

@@ -254,7 +254,7 @@ onUnmounted(() => {
             :style="{ background: cat.gradient }"
             @click="goCategory(cat)"
           >
-            <van-icon :name="cat.icon" size="36" class="cat-icon" />
+            <span class="svg-icon" v-html="cat.icon"></span>
             <span class="cat-name">{{ cat.name }}</span>
           </div>
         </div>
@@ -431,12 +431,19 @@ onUnmounted(() => {
     transform: scale(1.02);
   }
 }
-.cat-icon {
+.svg-icon {
   position: absolute;
   top: 8px;
   right: 8px;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 36px;
+  width: 36px;
+  height: 36px;
+  color: rgba(255, 255, 255, 0.5);
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke: currentColor; // 确保所有描边使用当前颜色
+  }
 }
 .cat-name {
   font-size: 18px;

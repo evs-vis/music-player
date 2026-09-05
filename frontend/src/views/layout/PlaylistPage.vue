@@ -87,7 +87,7 @@ onMounted(() => {
         @click="goCategory(cat)"
       >
         <div class="icon-wrapper" :style="{ backgroundColor: cat.color + '10', color: cat.color }">
-          <van-icon :name="cat.icon" size="32" />
+          <span class="svg-icon" v-html="cat.icon"></span>
         </div>
         <span class="cat-name" :style="{ color: cat.color }">{{ cat.name }}</span>
       </div>
@@ -185,6 +185,18 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.svg-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  color: inherit; // 继承父级 .icon-wrapper 的 color
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke: currentColor; // 确保所有描边使用当前颜色
+  }
+}
 // 推荐歌单
 .featured-section {
   margin-top: $xl;
