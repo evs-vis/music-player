@@ -1,7 +1,7 @@
 // postcss.config.js
 module.exports = {
   plugins: {
-    'postcss-px-to-viewport': {
+    'postcss-px-to-viewport-8-plugin': {
       viewportWidth: 375, // 设计稿宽度，通常 375（一倍图）
       unitPrecision: 5, // 转换后保留的小数位
       viewportUnit: 'vw', // 转换后的单位

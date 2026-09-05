@@ -10,7 +10,7 @@ import { thumbUrl } from '@/utils/image'
 const router = useRouter()
 const playerStore = usePlayerStore()
 
-// 分类列表（id/name/icon 来自共享常量；color 为分类卡片配色，仅本页使用）
+// 分类列表（id/name/icon 来自共享常量；color 为分类卡片配色）
 const categoryColors = {
   pop: '#27AE60',
   rock: '#a7344c',
@@ -36,7 +36,7 @@ const fetchFeatured = async () => {
       featuredPlaylist.value = res.playlists[0]
     }
   } catch {
-    // 静默处理
+    showToast({ type: 'fail', message: '获取失败' })
   } finally {
     loading.value = false
   }
@@ -44,7 +44,11 @@ const fetchFeatured = async () => {
 
 // 跳转分类详情页（传英文分类 id，详情页按 id 匹配）
 const goCategory = (cat) => {
-  router.push({ name: 'PlaylistDetail', params: { category: cat.id } })
+  router.push({ name: 'CategoryDetail', params: { id: cat.id } })
+}
+
+const goPlaylistDetail = (id) => {
+  router.push({ name: 'PlaylistDetail', params: { id: id } })
 }
 
 // 播放推荐歌单的所有歌曲
@@ -96,7 +100,7 @@ onMounted(() => {
     <!-- 推荐歌单 -->
     <section class="featured-section" v-if="featuredPlaylist">
       <h3 class="section-title">为您推荐</h3>
-      <div class="featured-card glass-card">
+      <div class="featured-card glass-card" @click="goPlaylistDetail(featuredPlaylist.id)">
         <div class="cover-wrapper">
           <van-image
             :src="featuredPlaylist.coverThumb || thumbUrl(featuredPlaylist.cover)"
@@ -189,12 +193,12 @@ onMounted(() => {
   display: inline-flex;
   width: 32px;
   height: 32px;
-  color: inherit; // 继承父级 .icon-wrapper 的 color
+  color: inherit;
   svg {
     width: 100%;
     height: 100%;
     display: block;
-    stroke: currentColor; // 确保所有描边使用当前颜色
+    stroke: currentColor;
   }
 }
 // 推荐歌单

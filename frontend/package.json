@@ -38,7 +38,7 @@
     "npm-run-all2": "^9.0.2",
     "oxlint": "~1.74.0",
     "pinia-plugin-persistedstate": "^4.7.1",
-    "postcss-px-to-viewport": "^1.1.1",
+    "postcss-px-to-viewport-8-plugin": "^1.2.5",
     "prettier": "3.9.5",
     "rollup-plugin-visualizer": "^7.1.1",
     "sass": "^1.102.0",

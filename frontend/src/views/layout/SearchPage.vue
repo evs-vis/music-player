@@ -142,7 +142,7 @@ const playHotItem = async (item) => {
 
 // 跳转分类详情（传英文分类 id，详情页按 category 字段匹配）
 const goCategory = (cat) => {
-  router.push({ name: 'PlaylistDetail', params: { category: cat.id } })
+  router.push({ name: 'CategoryDetail', params: { id: cat.id } })
 }
 
 // 卸载时取消待执行的防抖任务，避免切页后仍发无意义请求

@@ -47,7 +47,7 @@ const fetchData = async () => {
 }
 
 const goPlaylistDetail = (id) => {
-  router.push({ name: 'PlaylistDetail', params: { category: id } })
+  router.push({ name: 'PlaylistDetail', params: { id: id } })
 }
 
 const playSong = (song) => {

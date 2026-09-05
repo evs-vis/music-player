@@ -34,10 +34,16 @@ const routes = [
     ]
   },
   {
-    path: '/playlist/:category',
+    path: '/playlist/:id',
     name: 'PlaylistDetail',
     component: () => import('@/views/playlistDetail/PlaylistDetailPage.vue'),
     meta: { title: '歌单详情', showTabbar: false }
+  },
+  {
+    path: '/category/:id',
+    name: 'CategoryDetail',
+    component: () => import('@/views/playlistDetail/PlaylistDetailPage.vue'),
+    meta: { title: '分类详情', showTabbar: false }
   },
   {
     path: '/play',

@@ -69,9 +69,9 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^4.7.1
         version: 4.7.1(pinia@4.0.3(@vue/devtools-api@8.2.1)(vue@3.5.42))
-      postcss-px-to-viewport:
-        specifier: ^1.1.1
-        version: 1.1.1
+      postcss-px-to-viewport-8-plugin:
+        specifier: ^1.2.5
+        version: 1.2.5
       prettier:
         specifier: 3.9.5
         version: 3.9.5
@@ -1564,8 +1564,8 @@ packages:
   pkg-types@2.3.1:
     resolution: {integrity: sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg==}
 
-  postcss-px-to-viewport@1.1.1:
-    resolution: {integrity: sha512-2x9oGnBms+e0cYtBJOZdlwrFg/mLR4P1g2IFu7jYKvnqnH/HLhoKyareW2Q/x4sg0BgklHlP1qeWo2oCyPm8FQ==}
+  postcss-px-to-viewport-8-plugin@1.2.5:
+    resolution: {integrity: sha512-+yc69+q/euV7iKh5fGXY6C/lpepmVx2DGFHeYj5BpzIFyBBpdACDjZyrZ8AV0kCg+J0bplBv4ZA1QTzgaK0rGg==}
 
   postcss-selector-parser@7.1.5:
     resolution: {integrity: sha512-KvvtD7SrlBP7dlgkBghEE3r84CABm5SmV2aNcG4oCA+qDnJ/tvKonFVvwWAyyWUEwxuNawdfEAZKP9zM3oZ2Uw==}
@@ -3272,10 +3272,9 @@ snapshots:
       exsolve: 1.1.1
       pathe: 2.0.3
 
-  postcss-px-to-viewport@1.1.1:
+  postcss-px-to-viewport-8-plugin@1.2.5:
     dependencies:
       object-assign: 4.1.1
-      postcss: 8.5.27
 
   postcss-selector-parser@7.1.5:
     dependencies:

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore, useFavoritesStore, useAuthStore } from '@/stores'
 import { showToast } from 'vant'
@@ -12,6 +12,10 @@ const playerStore = usePlayerStore()
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
 
+const isPlaylistMode = computed(() => route.name === 'PlaylistDetail')
+const isCategoryMode = computed(() => route.name === 'CategoryDetail')
+const id = computed(() => route.params.id)
+
 const loading = ref(false)
 const playlistInfo = ref({
   name: '',
@@ -19,63 +23,86 @@ const playlistInfo = ref({
   description: '',
   songs: []
 })
-const originalSongs = ref([]) // 原始歌曲数据（用于播放全部）
+const originalSongs = ref([]) // 原始歌曲数据
 
-// 获取详情
 const fetchDetail = async () => {
   loading.value = true
   try {
-    const param = route.params.category
-    // 获取所有歌单和歌曲
+    // 并行请求：歌单列表 + 歌曲列表
     const [playlistsRes, songsRes] = await Promise.all([getPlaylistsService(), getSongsService()])
-    const allPlaylists = playlistsRes.playlists
-    const allSongs = songsRes.songs
 
-    // 判断是分类还是歌单 ID
-    // 先尝试作为歌单 ID 匹配
-    const matchedPlaylist = allPlaylists.find((p) => p.id === param)
-    if (matchedPlaylist) {
-      // 是歌单
-      playlistInfo.value = {
-        name: matchedPlaylist.name,
-        cover: matchedPlaylist.cover,
-        description: `${matchedPlaylist.songIds?.length || 0} 首歌曲`,
-        songs: matchedPlaylist.songIds
-          ? allSongs.filter((s) => matchedPlaylist.songIds.includes(s.id))
-          : []
+    const allPlaylists = playlistsRes.playlists || []
+    const allSongs = songsRes.songs || []
+    const paramId = id.value
+
+    // ===== 分支一：歌单模式 =====
+    if (isPlaylistMode.value) {
+      const matchedPlaylist = allPlaylists.find((p) => p.id === paramId)
+
+      if (!matchedPlaylist) {
+        // 歌单不存在：显示空状态，不报错
+        playlistInfo.value = {
+          name: '歌单不存在',
+          cover: '',
+          description: '请返回重新选择',
+          songs: []
+        }
+        originalSongs.value = []
+        return
       }
-    } else {
-      // 当作分类处理（param 为分类 id，与歌曲 category 英文 id 匹配）
-      const categorySongs = allSongs.filter((s) => s.category === param)
-      // 找出所有属于该分类的歌曲的封面作为背景（取第一首的封面）
-      const cover = categorySongs.length > 0 ? categorySongs[0].cover : ''
-      // 空分类时用兜底占位封面
-      const fallbackCover = allSongs[0]?.cover || ''
+
+      // 根据歌单的 songIds 过滤出完整歌曲
+      const songIds = matchedPlaylist.songIds || []
+      const songs = allSongs.filter((s) => songIds.includes(s.id))
+
       playlistInfo.value = {
-        name: categorySongs.length > 0 ? param : '该分类暂无歌曲',
-        cover: cover || fallbackCover,
-        description:
-          categorySongs.length > 0 ? `${categorySongs.length} 首歌曲` : '暂无歌曲，请浏览其他分类',
+        name: matchedPlaylist.name || '未命名歌单',
+        cover: matchedPlaylist.cover || '',
+        description: `${songs.length} 首歌曲`,
+        songs: songs
+      }
+      originalSongs.value = [...songs] // 浅拷贝，隔离引用
+      return
+    }
+
+    // ===== 分支二：分类模式 =====
+    if (isCategoryMode.value) {
+      const categorySongs = allSongs.filter((s) => s.category === paramId)
+
+      // 空分类处理
+      if (categorySongs.length === 0) {
+        const fallbackCover = allSongs[0]?.cover || ''
+        playlistInfo.value = {
+          name: '该分类暂无歌曲',
+          cover: fallbackCover,
+          description: '暂无歌曲，请浏览其他分类',
+          songs: []
+        }
+        originalSongs.value = []
+        return
+      }
+
+      // 取第一首歌的封面作为分类封面（如果歌本身有封面）
+      const cover = categorySongs[0]?.cover || ''
+
+      playlistInfo.value = {
+        name: paramId, // 分类名称直接用英文 id，或者你可以建一个映射表转成中文
+        cover: cover,
+        description: `${categorySongs.length} 首歌曲`,
         songs: categorySongs
       }
+      originalSongs.value = [...categorySongs] // 浅拷贝，隔离引用
     }
-    originalSongs.value = playlistInfo.value.songs
   } catch (error) {
-    console.error(error)
-    showToast({ type: 'fail', message: '加载失败' })
+    console.error('获取详情失败:', error)
+    showToast({ type: 'fail', message: '加载失败，请重试' })
   } finally {
     loading.value = false
   }
 }
 
 // 监听路由参数变化，重新加载
-watch(
-  () => route.params.category,
-  () => {
-    fetchDetail()
-  },
-  { immediate: true }
-)
+watch(() => route.params.id, fetchDetail, { immediate: true })
 
 // 播放全部
 const playAll = () => {
@@ -88,9 +115,9 @@ const playAll = () => {
 
 // 播放单曲
 const playSong = (index) => {
+  if (originalSongs.value.length === 0) return
   playerStore.playSongs(originalSongs.value, index)
 }
-
 // 收藏（传 song.id，与后端接口一致，PlayPage 同样传 id）
 const toggleFav = async (song) => {
   if (!authStore.isLoggedIn) {
