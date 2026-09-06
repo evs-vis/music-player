@@ -20,7 +20,7 @@ function isChunkLoadError(error) {
 
 // chunk 加载失败：单次自动恢复（sessionStorage 标记防死循环），仍失败则提示
 function handleChunkError(router, error) {
-  const retriedKey = 'chunk_retried'
+  const retriedKey = `chunk_retry:${to}`
   const to = error?.to?.fullPath
   if (!sessionStorage.getItem(retriedKey) && to) {
     sessionStorage.setItem(retriedKey, '1')
@@ -35,10 +35,17 @@ function handleChunkError(router, error) {
 // 写本地错误队列（环形，去重，节流）
 let lastReportTime = 0
 let lastErrorKey = ''
+function buildErrorKey(error) {
+  const msg = error?.message || String(error)
+  // 取栈顶第一行（定位到具体文件）
+  const stackLine = error?.stack?.split('\n')?.[1] || ''
+  return `${msg}|${stackLine}`
+}
 function reportError(error, extra = {}) {
   const message = error?.message || String(error)
   const now = Date.now()
   // 1s 节流 + 同内容去重：防快速切歌/连点时的错误风暴
+  const key = buildErrorKey(error)
   if (now - lastReportTime < 1000 && message === lastErrorKey) return
   lastReportTime = now
   lastErrorKey = message
@@ -57,6 +64,19 @@ function reportError(error, extra = {}) {
     localStorage.setItem(ERROR_STORAGE_KEY, JSON.stringify(list.slice(-MAX_ERRORS)))
   } catch {
     /* localStorage 不可用时静默 */
+  }
+  const endpoint = import.meta.env.VITE_ERROR_REPORT_URL
+  if (endpoint) {
+    const payload = {
+      message: error?.message || String(error),
+      stack: error?.stack?.slice(0, 500),
+      url: location.href,
+      userAgent: navigator.userAgent,
+      extra,
+      ts: Date.now()
+    }
+    // sendBeacon 保证页面关闭时也能发出去
+    navigator.sendBeacon?.(endpoint, JSON.stringify(payload))
   }
 }
 

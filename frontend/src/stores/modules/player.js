@@ -154,7 +154,6 @@ export const usePlayerStore = defineStore(
       if (playlist.value.length === 0) return
       // currentIndex 非法时从第 0 首开始
       if (playlist.value.length === 1) {
-        console.log('🎵 单曲模式，走 seekTo(0)，不触发 loadAndPlay')
         seekTo(0) // 从 0 开始播放
         return
       }
@@ -193,7 +192,6 @@ export const usePlayerStore = defineStore(
       currentTime.value = time
     }
 
-    // 音量统一由 persist 持久化（paths: ['volume', 'playMode']），无需手动写 localStorage
     function setVolume(vol) {
       volume.value = Math.max(0, Math.min(1, vol))
     }
@@ -217,7 +215,7 @@ export const usePlayerStore = defineStore(
         if (currentIndex.value >= playlist.value.length) {
           currentIndex.value = playlist.value.length - 1
         }
-        // 删当前歌后切到下一首，重置进度（#15）
+        // 删当前歌后切到下一首，重置进度
         setCurrentSong(playlist.value[currentIndex.value] || null)
       }
     }
@@ -231,11 +229,6 @@ export const usePlayerStore = defineStore(
       seekTime.value = null
       isPlaying.value = false
     }
-
-    // ===== 播放器快照（localStorage）=====
-    // 登录/登出、注销、App.vue 节流保存共用。此前这份逻辑散在 App.vue 与 auth store 三处
-    //（且 auth 越界管了播放器），现收口到 player store：key 命名、序列化/恢复集中在此。
-    // 仅保存列表与进度，不保存音量/播放模式（volume/playMode 已由 persist 单独持久化）。
 
     // key 命名：登录用户按 uid 分账，未登录存 guest
     const stateKey = (uid) => (uid ? `playerState_user_${uid}` : 'playerState_guest')

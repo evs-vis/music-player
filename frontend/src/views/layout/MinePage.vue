@@ -48,7 +48,7 @@ const playFromPopup = (song) => {
 }
 const showFavorites = ref(false)
 const showHistory = ref(false)
-// 清空播放历史（二次确认后调 store 数据层清空，UI 提示留在页面）
+// 清空播放历史
 const clearHistory = async () => {
   try {
     await showConfirmDialog({
@@ -66,7 +66,7 @@ const clearHistory = async () => {
     showToast({ type: 'fail', message: '清空失败，请重试' })
   }
 }
-// 注销账号（#39）：二次确认后删除账号并跳转登录页
+// 注销账号：二次确认后删除账号并跳转登录页
 const deleteAccount = async () => {
   try {
     await showConfirmDialog({
@@ -103,8 +103,6 @@ const menuItems = [
 // 点击头像触发文件选择
 const updatePic = () => {
   if (!isLoggedIn.value) return
-  // 冷却期内直接拦截，不发文件选择框（store 侧 uploadAvatar 也有兜底限频）。
-  // canUpload 是函数，点击时实时判断时间，不会因 computed 缓存导致永远冷却中
   if (!authStore.canUpload()) {
     showToast({ type: 'warning', message: '操作太频繁，请稍后再试' })
     return
@@ -116,8 +114,7 @@ const handleFileChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // 校验文件大小（10MB 硬上限）：上传前 store 会压缩至 ≤256px WebP（恒远小于后端 2MB 限制），
-  // 此处只拦超大的异常文件，避免手机原图（常超 2MB）被误拒
+  // 校验文件大小（10MB 硬上限）：上传前 store 会压缩至 ≤256px WebP（恒远小于后端 2MB 限制）
   if (file.size > 10 * 1024 * 1024) {
     showNotify({ type: 'warning', message: '图片不能超过10MB' })
     return
@@ -129,7 +126,6 @@ const handleFileChange = async (event) => {
     showToast({ message: '头像更新成功', icon: 'success' })
   } catch (error) {
     console.error(error)
-    // 先关闭「上传中」loading toast（duration:0 不会自动关闭，不关会永久锁屏）
     closeToast()
     const msg = error?.response?.data?.error || error?.message || '上传失败，请重试'
     showNotify({
@@ -137,11 +133,9 @@ const handleFileChange = async (event) => {
       message: msg
     })
   } finally {
-    // 清除 input 值，以便重复上传同一文件
     event.target.value = ''
   }
 }
-// store 内部已处理未登录（loadFavorites 清空、loadHistory 短路），无需外层判断
 onMounted(() => {
   favoritesStore.loadFavorites()
   historyStore.loadHistory()

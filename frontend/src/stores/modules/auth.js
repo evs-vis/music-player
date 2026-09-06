@@ -117,7 +117,7 @@ export const useAuthStore = defineStore(
       }
     }
 
-    // 上传头像（数据层：限频 + 调接口 + 更新 store 头像路径；UI 提示由页面负责）
+    // 上传头像（数据层：限频 + 调接口 + 更新 store 头像路径）
     async function uploadAvatar(file) {
       if (uploading.value) {
         const err = new Error('头像上传中，请稍候')
@@ -144,7 +144,7 @@ export const useAuthStore = defineStore(
 
     // 登出
     function logout() {
-      // 1. 保存当前播放状态到 localStorage（uid 需在清空登录态前取）
+      // 1. 保存当前播放状态到 localStorage
       try {
         usePlayerStore().savePlayerSnapshot(user.value?.id)
       } catch {
