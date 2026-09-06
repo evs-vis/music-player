@@ -231,8 +231,6 @@ pnpm dev                # 默认 http://localhost:5173
 
 ## 开发规范
 
-> 完整约定见 [docs/开发规范.md](docs/开发规范.md)（全面）与 [docs/前端开发规范.md](docs/前端开发规范.md)（前端专项）。
-
 - **代码检查**：oxlint + ESLint（`pnpm lint`），提交前由 husky + lint-staged 自动运行 `eslint --fix` + `prettier --write`
 - **分支**：默认 `master`，功能开发建议开 `feature/*` 分支
 - **CI**：push / PR 时自动运行 lint + build（`.github/workflows/ci.yml`）
