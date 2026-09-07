@@ -46,6 +46,7 @@ function createJsonStore(filename, defaultValue, { flushDelay = 10000 } = {}) {
 }
 
 module.exports = {
+  createJsonStore,
   usersStore: createJsonStore('users.json', []),
   favoritesStore: createJsonStore('favorites.json', {}),
   historyStore: createJsonStore('history.json', {}),

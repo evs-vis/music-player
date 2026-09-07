@@ -1,6 +1,7 @@
 import { ref, onUnmounted } from 'vue'
 import { usePlayerStore, useAuthStore, useHistoryStore } from '@/stores'
 import { showToast } from 'vant'
+import { track } from '@/utils/telemetry'
 
 export function useAudio() {
   const playerStore = usePlayerStore()
@@ -13,6 +14,9 @@ export function useAudio() {
   let pendingSeek = null // metadata 未就绪时的待执行 seek（#18）
   let lastErrorToastAt = 0 // 音频错误 toast 节流，防快速切歌连弹
   let isLoading = false
+  // 音频手动重试在途标记：success/fail 交由 canplay/error 事件裁决（不靠猜测/计时器）
+  let audioRetryPending = false
+  let retrySongKey = null
   const handlers = {}
 
   function initAudio() {
@@ -58,10 +62,21 @@ export function useAudio() {
       playerStore.setBuffering(false)
       // 能正常播放说明音频就绪，清除出错标记
       playerStore.setAudioError(false)
+      // 手动重试后真正可播放 → 自愈成功
+      if (audioRetryPending) {
+        audioRetryPending = false
+        retrySongKey = null
+        track('recover.audio.success')
+      }
     }
     handlers.playing = () => {
       playerStore.setBuffering(false)
       playerStore.setAudioError(false)
+      if (audioRetryPending) {
+        audioRetryPending = false
+        retrySongKey = null
+        track('recover.audio.success')
+      }
     }
 
     handlers.play = () => {
@@ -102,6 +117,12 @@ export function useAudio() {
       playerStore.setPlaying(false)
       // 置出错标记：UI 据此显示重试入口
       playerStore.setAudioError(true)
+      // 手动重试后仍出错 → 自愈失败（成功/失败各只计一次）
+      if (audioRetryPending) {
+        audioRetryPending = false
+        retrySongKey = null
+        track('recover.audio.fail')
+      }
       // toast 节流（1.5s）：快速连点切歌可能连续触发 error，避免刷屏
       const now = Date.now()
       if (now - lastErrorToastAt > 1500) {
@@ -130,6 +151,11 @@ export function useAudio() {
     const baseURL = import.meta.env.VITE_API_BASE_URL || ''
     const nextSrc = `${baseURL}${song.url}`
     const songKey = `${song.id || song.url}:${song.url}`
+    // 手动重试在途时用户切到别的歌：旧重试作废，避免把新歌的 playing 误判为重试成功
+    if (audioRetryPending && songKey !== retrySongKey) {
+      audioRetryPending = false
+      retrySongKey = null
+    }
     const seq = ++playSeq // 本次播放序号
     isLoading = true
 
@@ -179,6 +205,10 @@ export function useAudio() {
   async function retryPlayback() {
     const song = playerStore.currentSong
     if (!song?.url) return
+    // 置在途标记并计尝试：success/fail 由 canplay/error 事件裁决
+    audioRetryPending = true
+    retrySongKey = `${song.id || song.url}:${song.url}`
+    track('recover.audio.attempt')
     isLoading = false
     currentSongKey = null // 强制 loadAndPlay 重新赋值 src → 触发重新加载
     await loadAndPlay(song)

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onErrorCaptured } from 'vue'
+import { track } from '@/utils/telemetry'
 
 // 组件级错误边界：隔离渲染错误，展示兜底 UI 并支持重试，避免整棵组件树崩溃。
 const props = defineProps({
@@ -12,6 +13,9 @@ const hasError = ref(false)
 
 onErrorCaptured((err) => {
   hasError.value = true
+  // 5 层捕获之一（隔离层）：错误被边界吞掉，不进全局 reportError，故在此单独计数。
+  // 边界重试是"用户点击"的手动恢复且成功不可直接观测，不计恢复率，只计捕获。
+  track('capture.boundary')
   console.error('[ErrorBoundary]', err)
   return false // 阻断继续冒泡到全局 errorHandler
 })

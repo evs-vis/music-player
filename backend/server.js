@@ -9,6 +9,7 @@ const user = require('./middleware/user');
 const { JWT_SECRET, CORS_ORIGINS } = require('./config');
 const { writeFileAtomic, readJSON } = require('./jsonfs');
 const { usersStore, favoritesStore, historyStore, searchHistoryStore } = require('./store');
+const metrics = require('./metrics');
 const accessLog = require('./accessLog');
 
 const app = express();
@@ -23,11 +24,26 @@ app.use(cors({ origin: CORS_ORIGINS }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ====== 错误/自愈计数上报（metrics.js）：只收聚合计数，无鉴权无隐私字段 ======
+// GET：读取聚合（测试/手动查看）；POST：前端 telemetry.js 批量上报（白名单校验 + 会话批次去重）。
+// 不暴露 reset/delete 端点（测试重置直接删 data/metrics.json 文件）。
+app.get('/api/metrics', (req, res) => {
+  res.json(metrics.get());
+});
+app.post('/api/metrics', (req, res) => {
+  if (!metrics.record(req.body)) {
+    res.status(400).json({ error: 'invalid metrics payload' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 // ====== 可变数据：内存缓存层（store.js） + 退出兜底落盘 ======
 // 内存缓存启动时读入；写队列串行 + 10s 防抖落盘。
 // 进程退出/被杀时同步 flush，尽量不丢最后 10s 内的变更。
 function flushAllSync() {
   [usersStore, favoritesStore, historyStore, searchHistoryStore].forEach(s => s.flushNowSync());
+  metrics.flushNowSync();
 }
 process.on('exit', flushAllSync);
 for (const sig of ['SIGINT', 'SIGTERM']) {

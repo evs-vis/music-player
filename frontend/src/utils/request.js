@@ -2,6 +2,7 @@ import axios from 'axios'
 import router from '@/router'
 import { useAuthStore } from '@/stores'
 import { showToast } from 'vant'
+import { track } from './telemetry'
 
 // 创建 Axios 实例
 // baseURL 默认留空（走同源 /api，由 vite dev/preview 的 proxy 转发到后端），
@@ -51,6 +52,10 @@ instance.interceptors.response.use(
         pendingMap.delete(response.config.__requestKey)
       }
     }
+    // 该请求经过 ≥1 次自动重试后最终成功 → 网络层自愈成功（每次最终成功只计一次）
+    if (response.config.__retryCount > 0) {
+      track('recover.network.success')
+    }
     return response.data
   },
   (err) => {
@@ -68,6 +73,8 @@ instance.interceptors.response.use(
       const status = err.response?.status
       const retriable = !err.response || (status >= 500 && status !== 501)
       if (retriable) {
+        // tried = 至少触发一次自动重试的原请求数（只在首次调度时计，避免把多次重试轮当多请求）
+        if (retryCount === 0) track('recover.network.tried')
         err.config.__retryCount = retryCount + 1
         err.config.__retrySilent = true // 重试期间失败不弹 toast，最终耗尽时才弹
         const delay = 1000 * 2 ** retryCount
@@ -93,6 +100,10 @@ instance.interceptors.response.use(
       }
     } else {
       if (shouldToast) showToast('网络连接失败，请检查网络')
+    }
+    // 曾触发过自动重试但仍最终失败 → 网络层自愈失败（未重试过的错误不计，分母=需重试的请求数）
+    if (err.config?.__retryCount > 0) {
+      track('recover.network.fail')
     }
     return Promise.reject(err)
   }
