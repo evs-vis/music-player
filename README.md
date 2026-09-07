@@ -206,7 +206,6 @@ music-player/
 
 ## 开发规范
 
-> 完整约定见 [docs/开发规范.md](docs/开发规范.md)（全面）与 [docs/前端开发规范.md](docs/前端开发规范.md)（前端专项）——**均为仓库内本地文档，不入库**。
 
 - **代码检查**：oxlint + ESLint（`pnpm lint`），提交前 husky + lint-staged 自动 `eslint --fix` + `prettier --write`
 - **分支**：默认 `master`，功能开发建议开 `feature/*` 分支
